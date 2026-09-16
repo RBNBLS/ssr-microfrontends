@@ -1,0 +1,127 @@
+{
+  "id": "mfe1",
+  "name": "mfe1",
+  "metaData": {
+    "name": "mfe1",
+    "type": "app",
+    "buildInfo": {
+      "buildVersion": "1.0.0",
+      "buildName": "ssr-mfe"
+    },
+    "remoteEntry": {
+      "name": "mfe1.js",
+      "path": "",
+      "type": "commonjs-module"
+    },
+    "types": {
+      "path": "",
+      "name": "",
+      "zip": "",
+      "api": ""
+    },
+    "globalName": "mfe1",
+    "pluginVersion": "2.9.0",
+    "publicPath": "http://localhost:3002/"
+  },
+  "shared": [
+    {
+      "singleton": true,
+      "requiredVersion": "^19.3.0",
+      "shareScope": "default",
+      "name": "react-dom",
+      "version": "19.3.0",
+      "eager": false,
+      "id": "mfe1:react-dom",
+      "assets": {
+        "js": {
+          "async": [],
+          "sync": [
+            "vendors-node_modules_react-dom_index_jsmfe1.js"
+          ]
+        },
+        "css": {
+          "async": [],
+          "sync": []
+        }
+      },
+      "usedIn": [],
+      "usedExports": [],
+      "fallback": ""
+    },
+    {
+      "singleton": true,
+      "requiredVersion": "^8.4.0",
+      "shareScope": "default",
+      "name": "react-router",
+      "version": "8.4.0",
+      "eager": false,
+      "id": "mfe1:react-router",
+      "assets": {
+        "js": {
+          "async": [],
+          "sync": [
+            "vendors-node_modules_react-router_dist_development_index_jsmfe1.js"
+          ]
+        },
+        "css": {
+          "async": [],
+          "sync": []
+        }
+      },
+      "usedIn": [
+        "./serverEntry"
+      ],
+      "usedExports": [],
+      "fallback": ""
+    },
+    {
+      "singleton": true,
+      "requiredVersion": "^19.3.0",
+      "shareScope": "default",
+      "name": "react",
+      "version": "19.3.0",
+      "eager": false,
+      "id": "mfe1:react",
+      "assets": {
+        "js": {
+          "async": [],
+          "sync": [
+            "vendors-node_modules_react_index_jsmfe1.js"
+          ]
+        },
+        "css": {
+          "async": [],
+          "sync": []
+        }
+      },
+      "usedIn": [],
+      "usedExports": [],
+      "fallback": ""
+    }
+  ],
+  "remotes": [],
+  "exposes": [
+    {
+      "path": "./serverEntry",
+      "id": "mfe1:serverEntry",
+      "name": "serverEntry",
+      "requires": [
+        "react-router"
+      ],
+      "file": "src/serverEntry.tsx",
+      "assets": {
+        "js": {
+          "sync": [
+            "vendors-node_modules_react-dom_server_node_js-node_modules_react_compiler-runtime_js-node_mod-cc0addmfe1.js",
+            "__federation_expose_serverEntrymfe1.js"
+          ],
+          "async": []
+        },
+        "css": {
+          "sync": [],
+          "async": []
+        }
+      }
+    }
+  ]
+}

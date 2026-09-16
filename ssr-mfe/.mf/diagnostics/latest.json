@@ -1,0 +1,10 @@
+{
+  "latestErrorEvent": {
+    "code": "TYPE-001",
+    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"/Users/redabezzour/.nvm/versions/node/v24.21.0/bin/node /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/typescript/bin/tsc --project /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/.federation/tsconfig.45f106d5165f6ce59e9e1a222c904dfa.json\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
+    "args": {
+      "cmd": "/Users/redabezzour/.nvm/versions/node/v24.21.0/bin/node /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/typescript/bin/tsc --project /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/.federation/tsconfig.45f106d5165f6ce59e9e1a222c904dfa.json"
+    },
+    "timestamp": 1789577518476
+  }
+}
