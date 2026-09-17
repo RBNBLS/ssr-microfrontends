@@ -1,10 +1,6 @@
 import { Links, Meta, Outlet, Scripts, Link, useLoaderData } from 'react-router'
 import { buildMfeRegistry } from './mfeConfig.server'
 import { registerMfeRemotes } from './mfeRegistry'
-import { installServerGuards } from './serverGuards'
-
-// Once per server process, before any request. No-op in the browser.
-installServerGuards()
 
 // Server-only: reads env, so it never reaches the browser bundle. React Router
 // serialises the return value into the document as ordinary loader data, which
