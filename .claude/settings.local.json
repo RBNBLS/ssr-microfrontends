@@ -76,7 +76,31 @@
       "Bash(xargs -r kill -9)",
       "Bash(curl -s http://localhost:3000/mfe1 -o /tmp/degraded.html -w \"  status: %{http_code}\\\\n\")",
       "Bash(curl -s -o /tmp/h.html -w \"code=%{http_code} size=%{size_download}\\\\n\" http://localhost:3000/)",
-      "Bash(grep -vE \"^\\\\s*at |^$\" /tmp/i-shell4.log)"
+      "Bash(grep -vE \"^\\\\s*at |^$\" /tmp/i-shell4.log)",
+      "Bash(rm -f scripts/serve-node.mjs)",
+      "Bash(rmdir scripts *)",
+      "Bash(rm -f src/App.tsx src/App.css)",
+      "Bash(lsof -i:3002)",
+      "Bash(grep -vE \"^\\\\s+at |^$\" /tmp/p-shell.log | tail -20)",
+      "Bash(curl -s -o /dev/null -w \"  status: %{http_code}\\\\n\" http://localhost:3001/)",
+      "Bash(curl -s \"http://localhost:3002/?path=/about\")",
+      "Bash(sed -i '' 's/Hello from MFE1 — this content was rendered on the server./EDITED-WITHOUT-SHELL-RESTART/' src/routes.tsx)",
+      "Bash(curl -s -o /dev/null -w \"shell /mfe1: %{http_code}\\\\n\" http://localhost:3000/mfe1)",
+      "Bash(curl -s -X POST http://localhost:3002/__fragment -H 'content-type: application/json' -d '{\"url\":\"/mfe1\",\"basePath\":\"/mfe1\",\"headers\":{}}')",
+      "Bash(grep -vE \"^\\\\s+at |^$\" /tmp/p-shell2.log | tail -20)",
+      "Bash(sed -i '' 's/Hello from MFE1 — this content was rendered on the server./EDITED-NO-SHELL-RESTART/' src/routes.tsx)",
+      "Bash(sed -i '' 's/EDITED-NO-SHELL-RESTART/Hello from MFE1 — this content was rendered on the server./' src/routes.tsx)",
+      "Bash(cd /Users/redabezzour/Desktop/tanstack-start && find . -name \"tanstack-start-mfe-ssr-architecture.md\" -not -path \"*/node_modules/*\" 2>/dev/null; echo \"--- root listing ---\"; ls -la start-basic-rsbuild/*.md 2>/dev/null)",
+      "Bash(node -p \"' version: '+require\\('./node_modules/@module-federation/runtime/package.json'\\).version\")",
+      "Bash(curl -s -o /dev/null -w \"  @mf-types.zip  -> %{http_code}\\\\n\" http://localhost:3001/@mf-types.zip)",
+      "Bash(curl -s -o /dev/null -w \"  @mf-types.d.ts -> %{http_code}\\\\n\" http://localhost:3001/@mf-types.d.ts)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('  manifest types:', d['metaData']['types'], '\\\\n  publicPath:', d['metaData']['publicPath']\\)\")",
+      "Bash(grep -rnoE \"force[^,;\\)]{0,40}|already registered[^'\\\\\"]{0,40}|registerRemotes\\\\\\([^\\)]{0,60}\" node_modules/@module-federation/runtime-core/dist/index.cjs.js)",
+      "Bash(grep -nA12 \"registerRemotes\\(remotes\" node_modules/@module-federation/runtime-core/dist/core.js)",
+      "Bash(grep -v \"\\\\.map$\")",
+      "Bash(grep -nA18 \"registerRemotes\\(remotes\" node_modules/@module-federation/runtime-core/dist/remote/index.js)",
+      "Bash(grep -nA22 \"registerRemote\\(remote, targetRemotes\" node_modules/@module-federation/runtime-core/dist/remote/index.js)",
+      "Bash(awk '{print \" \",$5,$9}')"
     ]
   }
 }

@@ -1,14 +1,10 @@
-// Single source of truth for where MFEs are mounted.
+// Universal MFE configuration — safe in both bundles.
 //
-// The shell owns the URL space; each MFE owns everything below its mount path.
-// Both the route table and the federation call read from here, so the two can
-// never drift — previously `/mfe1` was hardcoded independently in the shell's
-// route and in the MFE's router basename.
+// Anything that reads `process.env` or describes infrastructure lives in
+// mfeConfig.server.ts instead, so it never reaches the browser.
 
 export const MFE1_SEGMENT = 'mfe1'
-export const MFE1_BASE = `/${MFE1_SEGMENT}`
 
-/** Budget for an MFE's server render. Past this the shell stops waiting and
- *  falls back to client rendering, so one slow MFE cannot hold the whole
- *  response hostage. */
-export const MFE_SSR_TIMEOUT_MS = 800
+/** Where the shell mounts MFE1. The shell owns the URL space; the MFE owns
+ *  everything below this path and is told it rather than hardcoding it. */
+export const MFE1_BASE = `/${MFE1_SEGMENT}`

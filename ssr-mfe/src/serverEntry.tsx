@@ -21,8 +21,9 @@ export interface ServerEntryResult {
 }
 
 /**
- * Federated server entry — called in-process by the shell's Start server.
- * Plain React Router in library mode: no MFE-owned server, no server routes.
+ * Renders this MFE to an HTML fragment. Called over HTTP by the shell's server
+ * (see server.ts) — plain React Router in library mode, no MFE-owned
+ * application server and no server routes.
  */
 export async function serverEntry({
   url,

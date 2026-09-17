@@ -1,16 +1,12 @@
-# Local
-.DS_Store
-*.local
-*.log*
-
-# Dist
 node_modules
-dist/
 
-# Profile
-.rspack-profile-*/
+# build output
+dist
+node
 
-# IDE
-.vscode/*
-!.vscode/extensions.json
-.idea
+# generated: Module Federation types published to consumers
+@mf-types
+
+.DS_Store
+.env
+.cache

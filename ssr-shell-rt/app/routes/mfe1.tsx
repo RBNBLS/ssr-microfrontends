@@ -1,46 +1,69 @@
+import { loadRemote } from '@module-federation/enhanced/runtime'
 import { useEffect, useRef, useState } from 'react'
 import { useLoaderData } from 'react-router'
-import { MFE1_BASE, MFE_SSR_TIMEOUT_MS } from '../mfeConfig'
+import { MFE1_BASE } from '../mfeConfig'
+import { MFE1_FRAGMENT_URL, MFE_SSR_TIMEOUT_MS } from '../mfeConfig.server'
 import { peekHtml, putHtml } from '../mfeHtmlStore'
 
+// Both halves of MFE1's contract, declared by hand and kept together.
+//
+// MF can generate the browser half from the remote's real exports, but only if
+// a remote is declared at build time — which also bakes its URL into the
+// bundle and defeats the runtime registry. Revisit when the contract or the
+// MFE count makes generation worth that trade.
+
+/** `POST /__fragment` response — the server half. */
+interface Fragment {
+  html: string
+  data: Record<string, unknown>
+  head: { title: string }
+}
+
+/** `mfe1/clientEntry` — the browser half. */
+interface Mfe1ClientEntry {
+  clientEntry(
+    container: Element,
+    input: { data?: unknown; basePath: string },
+  ): void
+}
+
 /**
- * Stops waiting after `ms`. Note this does not cancel the underlying work —
- * the MFE's render keeps running to completion in the background; we simply
- * stop blocking the response on it.
+ * Fetches a rendered fragment from an MFE's server.
+ *
+ * The MFE runs in its own process, so a failure here is an ordinary rejected
+ * promise or a non-2xx response — never something that can corrupt or crash
+ * the shell. `AbortSignal.timeout` also genuinely cancels the request, unlike
+ * racing a timer against in-process work.
  */
-async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(`MFE SSR exceeded ${ms}ms budget`)),
-          ms,
-        )
-      }),
-    ])
-  } finally {
-    clearTimeout(timer)
+async function fetchFragment(
+  endpoint: string,
+  input: { url: string; headers: Record<string, string>; basePath: string },
+): Promise<Fragment> {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+    signal: AbortSignal.timeout(MFE_SSR_TIMEOUT_MS),
+  })
+
+  if (!response.ok) {
+    throw new Error(`${endpoint} responded ${response.status}`)
   }
+
+  return response.json() as Promise<Fragment>
 }
 
 // In framework mode `loader` is server-only by construction — React Router
-// strips it from the client bundle — so the Node-only federated import needs
-// no `createServerOnlyFn` equivalent.
+// strips it from the client bundle.
 export async function loader({ request }: { request: Request }) {
-  try {
-    const { serverEntry } = await import('mfe1/serverEntry')
-    const url = new URL(request.url)
+  const url = new URL(request.url)
 
-    const result = await withTimeout(
-      serverEntry({
-        url: url.pathname + url.search,
-        headers: Object.fromEntries(request.headers.entries()),
-        basePath: MFE1_BASE,
-      }),
-      MFE_SSR_TIMEOUT_MS,
-    )
+  try {
+    const result = await fetchFragment(MFE1_FRAGMENT_URL, {
+      url: url.pathname + url.search,
+      headers: Object.fromEntries(request.headers.entries()),
+      basePath: MFE1_BASE,
+    })
 
     // `html` deliberately does NOT go into loader data — only a token does.
     // `data` and `head` do: the MFE's client router needs `data` to hydrate
@@ -54,7 +77,7 @@ export async function loader({ request }: { request: Request }) {
     // The MFE is a fragment, not the page. A broken or slow one costs SEO for
     // that fragment and falls back to client rendering — it must never take
     // down the shell's response.
-    console.error('[shell] MFE1 server render failed, falling back to CSR:', error)
+    console.error('[shell] MFE1 fragment fetch failed, falling back to CSR:', error)
     return null
   }
 }
@@ -92,9 +115,19 @@ export default function Mfe1Mount() {
     mountedRef.current = true
     const container = containerRef.current
 
-    import('mfe1/clientEntry')
-      .then(({ clientEntry }) => {
-        clientEntry(container, {
+    // `loadRemote` rather than a bare `import('mfe1/clientEntry')`: the
+    // specifier is a runtime string, so the server compilation has nothing to
+    // resolve — no `externals` workaround needed. The container itself was
+    // registered from the document's registry at boot (app/mfeRegistry.ts).
+    loadRemote<Mfe1ClientEntry>('mfe1/clientEntry')
+      .then((mod) => {
+        // `loadRemote` resolves to null when the container isn't registered —
+        // e.g. the document carried no registry. Treat it like any other
+        // failure to mount: log, leave the fragment as-is, don't break the page.
+        if (!mod) {
+          throw new Error('mfe1/clientEntry unavailable (remote not registered)')
+        }
+        mod.clientEntry(container, {
           data: initial?.data,
           basePath: MFE1_BASE,
         })

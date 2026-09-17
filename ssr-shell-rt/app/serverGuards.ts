@@ -2,15 +2,13 @@
 // per-MFE one — installed once at boot from `root.tsx`, so adding mfe2/mfe3
 // requires nothing here.
 //
-// Why it is needed: catching federation failures at the call site is NOT
-// sufficient. When a remote is unreachable, `@module-federation/runtime-core`'s
-// SnapshotHandler rejects an internal floating promise *in addition to* the one
-// we await, and Node terminates the process on an unhandled rejection.
-// Verified: with an MFE's SSR server down, the request degraded correctly to
-// CSR and the shell process still exited seconds later.
+// Originally added because in-process Module Federation leaked an unhandled
+// rejection that killed the shell whenever a remote was unreachable. MFEs now
+// run behind HTTP, so that specific hazard is gone — a failed fetch is an
+// ordinary rejected promise caught at the call site.
 //
-// A web server must not die because one fragment's remote was unreachable.
-// If you add error reporting later, this is the hook for it.
+// Kept deliberately: a web server should not die from a stray rejection
+// anywhere in the process. If you add error reporting later, this is the hook.
 
 let installed = false
 

@@ -18,7 +18,7 @@ async function fetchGreeting(): Promise<GreetingData> {
 function Layout() {
   return (
     <div style={{ border: '2px dashed #999', padding: 12, borderRadius: 8 }}>
-      <strong>MFE1</strong> (own router, basename /mfe1)
+      <strong>MFE1</strong> (own router, basename passed by the shell)
       <nav style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
         <Link to="/">Home</Link>
         <Link to="/about">About</Link>

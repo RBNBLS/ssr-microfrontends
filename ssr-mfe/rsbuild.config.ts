@@ -3,21 +3,22 @@ import { pluginReact } from '@rsbuild/plugin-react';
 import { pluginTailwindcss } from '@rsbuild/plugin-tailwindcss';
 import { pluginModuleFederation } from '@module-federation/rsbuild-plugin';
 
-// Runtime dependencies that must stay singleton across shell + MFEs
-// (architecture doc, "Mandatory Rules for MFE Teams" #5).
+// Shared as singletons with the shell in the browser, so the page carries one
+// copy of React and one router. Only relevant client-side: the server boundary
+// is a serialized string, so instance identity never matters there.
 const shared = {
   react: { singleton: true, requiredVersion: '^19.3.0' },
   'react-dom': { singleton: true, requiredVersion: '^19.3.0' },
   'react-router': { singleton: true, requiredVersion: '^8.4.0' },
 };
 
-// Docs: https://rsbuild.rs/config/
 export default defineConfig({
   server: {
     port: 3001,
   },
   environments: {
-    // Browser build — exposes `clientEntry`, consumed by the shell's browser bundle.
+    // Browser build: the federated `clientEntry` the shell hydrates with, plus
+    // a standalone dev page so MFE devs can work without running the shell.
     web: {
       source: {
         entry: { index: './src/index.tsx' },
@@ -26,27 +27,22 @@ export default defineConfig({
         target: 'web',
       },
     },
-    // Node build — exposes `serverEntry`, consumed in-process by the shell's Start server.
-    // rsbuild's dev server only serves the `web` environment's assets over HTTP, so this
-    // environment writes to disk continuously and is served separately (see scripts/serve-node.mjs).
+    // Fragment server: a plain Node service wrapping `serverEntry` over HTTP.
+    // No Module Federation here — the shell fetches rendered HTML rather than
+    // loading this MFE's code into its own process.
     node: {
       source: {
-        entry: { index: './src/serverEntry.tsx' },
+        entry: { index: './src/server.ts' },
       },
       output: {
         target: 'node',
         distPath: { root: 'node' },
-        // The manifest bakes this in as its `publicPath`, and the shell's
-        // federation runtime fetches the remote entry from it. Without this
-        // it inherits the project-wide dev server origin (:3001) and the
-        // shell tries to load the node bundle from the web server.
-        assetPrefix: 'http://localhost:3002/',
+        // Emitted as ESM, matching this package's "type": "module", so plain
+        // `node node/index.js` runs it with no interop shims.
       },
       dev: {
+        // The server runs from disk, so dev builds must be written out.
         writeToDisk: true,
-        // In dev, `dev.assetPrefix` wins over `output.assetPrefix` — without
-        // it rsbuild uses the dev server origin (:3001) for this build too.
-        assetPrefix: 'http://localhost:3002/',
       },
     },
   },
@@ -55,6 +51,7 @@ export default defineConfig({
       reactCompiler: true,
     }),
     pluginTailwindcss(),
+    // Browser federation only.
     pluginModuleFederation(
       {
         name: 'mfe1',
@@ -62,14 +59,6 @@ export default defineConfig({
         shared,
       },
       { target: 'web' },
-    ),
-    pluginModuleFederation(
-      {
-        name: 'mfe1',
-        exposes: { './serverEntry': './src/serverEntry.tsx' },
-        shared,
-      },
-      { target: 'node' },
     ),
   ],
 });
