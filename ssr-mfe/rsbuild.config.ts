@@ -58,7 +58,10 @@ export default defineConfig({
     pluginModuleFederation(
       {
         name: "mfe1",
-        exposes: { "./clientEntry": "./src/clientEntry.tsx" },
+        exposes: {
+          "./clientEntry": "./src/clientEntry.tsx",
+          "./capabilities": "./src/capabilities.ts",
+        },
         shared,
         experiments: { asyncStartup: true },
       },

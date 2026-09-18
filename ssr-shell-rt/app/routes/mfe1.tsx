@@ -30,6 +30,11 @@ interface Mfe1ClientEntry {
   ): void;
 }
 
+/** `mfe1/capabilities` — plain functions the shell (or other MFEs) may call. */
+interface Mfe1Capabilities {
+  addTwoNumbers(a: number, b: number): number;
+}
+
 /**
  * Fetches a rendered fragment from an MFE's server.
  *
@@ -120,8 +125,10 @@ export default function Mfe1Mount() {
     const container = containerRef.current;
 
     async function loadRemoteMfe() {
-      const mfeClientModule =
-        await loadRemote<Mfe1ClientEntry>("mfe1/clientEntry");
+      const [mfeClientModule, capabilities] = await Promise.all([
+        loadRemote<Mfe1ClientEntry>("mfe1/clientEntry"),
+        loadRemote<Mfe1Capabilities>("mfe1/capabilities"),
+      ]);
       if (!mfeClientModule) {
         throw new Error("mfe1/clientEntry unavailable (remote not registered)");
       }
@@ -129,6 +136,7 @@ export default function Mfe1Mount() {
         data: initial?.data,
         basePath: MFE1_BASE,
       });
+      console.log({ capabilities: capabilities?.addTwoNumbers(2, 2) });
     }
 
     loadRemoteMfe();

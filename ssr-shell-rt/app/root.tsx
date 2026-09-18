@@ -1,12 +1,19 @@
-import { Links, Meta, Outlet, Scripts, Link, useLoaderData } from 'react-router'
-import { buildMfeRegistry } from './mfeConfig.server'
-import { registerMfeRemotes } from './mfeRegistry'
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  Link,
+  useLoaderData,
+} from "react-router";
+import { buildMfeRegistry } from "./mfeConfig.server";
+import { registerMfeRemotes } from "./mfeRegistry";
 
 // Server-only: reads env, so it never reaches the browser bundle. React Router
 // serialises the return value into the document as ordinary loader data, which
 // is how the registry reaches the client — no bespoke global needed.
 export function loader() {
-  return { mfeRegistry: buildMfeRegistry() }
+  return { mfeRegistry: buildMfeRegistry() };
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -19,7 +26,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <div style={{ display: 'flex', gap: 12, padding: 8, fontSize: 18 }}>
+        <div style={{ display: "flex", gap: 12, padding: 8, fontSize: 18 }}>
           <Link to="/">Home</Link>
           <Link to="/mfe1">MFE1</Link>
         </div>
@@ -28,15 +35,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
-  )
+  );
 }
 
 export default function Root() {
-  const { mfeRegistry } = useLoaderData<typeof loader>()
+  const { mfeRegistry } = useLoaderData<typeof loader>();
 
   // In render, not an effect — see registerMfeRemotes. Idempotent, so React's
   // double-render in development is harmless.
-  registerMfeRemotes(mfeRegistry)
+  registerMfeRemotes(mfeRegistry);
 
-  return <Outlet />
+  return <Outlet />;
 }
