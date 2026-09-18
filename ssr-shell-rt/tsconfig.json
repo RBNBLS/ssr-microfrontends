@@ -9,7 +9,10 @@
     "skipLibCheck": true,
     "strict": true,
     "resolveJsonModule": true,
-    "types": ["@rsbuild/core/types", "node"]
+    "types": ["@rsbuild/core/types", "node"],
+    // Lets a route module import its generated types as `./+types/<name>`.
+    // The plugin writes them to .react-router/types mirroring app/.
+    "rootDirs": [".", "./.react-router/types"]
   },
-  "include": ["app", "*.ts"]
+  "include": ["app", "*.ts", ".react-router/types/**/*"]
 }
