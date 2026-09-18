@@ -37903,15 +37903,15 @@ const PORT = Number(process.env.PORT ?? 3002);
 function json(res, status, body) {
     const payload = JSON.stringify(body);
     res.writeHead(status, {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload)
     });
     res.end(payload);
 }
 async function readJson(req) {
     const chunks = [];
     for await (const chunk of req)chunks.push(chunk);
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 /** Dev-only: lets an MFE developer see their own SSR output without the shell. */ function previewPage(html, title) {
     return `<!DOCTYPE html>
@@ -37932,59 +37932,59 @@ async function readJson(req) {
 }
 const server = (0,node_http__rspack_import_0.createServer)(async (req, res)=>{
     // The shell renders from a different origin in dev.
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'content-type');
-    if (req.method === 'OPTIONS') {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "content-type");
+    if (req.method === "OPTIONS") {
         res.writeHead(204).end();
         return;
     }
-    const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
-    if (url.pathname === '/health') {
+    const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+    if (url.pathname === "/health") {
         json(res, 200, {
             ok: true,
-            mfe: 'mfe1'
+            mfe: "mfe1"
         });
         return;
     }
-    if (url.pathname === '/__fragment' && req.method === 'POST') {
+    if (url.pathname === "/__fragment" && req.method === "POST") {
         try {
             const input = await readJson(req);
             json(res, 200, await (0,_serverEntry__rspack_import_1.serverEntry)(input));
         } catch (error) {
             // The shell treats any non-200 as "render this fragment client-side".
-            console.error('[mfe1] fragment render failed:', error);
+            console.error("[mfe1] fragment render failed:", error);
             json(res, 500, {
                 error: String(error)
             });
         }
         return;
     }
-    if (url.pathname === '/' && req.method === 'GET') {
+    if (url.pathname === "/" && req.method === "GET") {
         try {
             const result = await (0,_serverEntry__rspack_import_1.serverEntry)({
-                url: url.searchParams.get('path') ?? '/',
-                basePath: ''
+                url: url.searchParams.get("path") ?? "/",
+                basePath: ""
             });
             res.writeHead(200, {
-                'Content-Type': 'text/html; charset=utf-8'
+                "Content-Type": "text/html; charset=utf-8"
             });
             res.end(previewPage(result.html, result.head.title));
         } catch (error) {
             res.writeHead(500, {
-                'Content-Type': 'text/plain'
+                "Content-Type": "text/plain"
             });
             res.end(String(error));
         }
         return;
     }
     json(res, 404, {
-        error: 'Not found'
+        error: "Not found"
     });
 });
 server.listen(PORT, ()=>{
     console.log(`[mfe1] fragment server on http://localhost:${PORT}`);
-    console.log('[mfe1]   POST /__fragment   contract endpoint');
-    console.log('[mfe1]   GET  /?path=/about SSR preview');
+    console.log("[mfe1]   POST /__fragment   contract endpoint");
+    console.log("[mfe1]   GET  /?path=/about SSR preview");
 });
 
 })();

@@ -1,13 +1,13 @@
-import { createRoot, hydrateRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router'
-import { routes } from './routes'
+import { createRoot, hydrateRoot } from "react-dom/client";
+import { createBrowserRouter, RouterProvider } from "react-router";
+import { routes } from "./routes";
 
 export interface ClientEntryInput {
   /** Loader data from `serverEntry`, handed over by the shell as plain data.
    *  Absent when SSR failed and the shell fell back to client rendering. */
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>;
   /** Must match the `basePath` the shell sent to the fragment server. */
-  basePath: string
+  basePath: string;
 }
 
 /**
@@ -21,11 +21,11 @@ export function clientEntry(container: Element, input: ClientEntryInput) {
   const router = createBrowserRouter(routes, {
     basename: input.basePath,
     hydrationData: input.data ? { loaderData: input.data } : undefined,
-  })
+  });
 
   if (container.hasChildNodes()) {
-    hydrateRoot(container, <RouterProvider router={router} />)
+    hydrateRoot(container, <RouterProvider router={router} />);
   } else {
-    createRoot(container).render(<RouterProvider router={router} />)
+    createRoot(container).render(<RouterProvider router={router} />);
   }
 }

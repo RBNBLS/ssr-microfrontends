@@ -100,7 +100,13 @@
       "Bash(grep -v \"\\\\.map$\")",
       "Bash(grep -nA18 \"registerRemotes\\(remotes\" node_modules/@module-federation/runtime-core/dist/remote/index.js)",
       "Bash(grep -nA22 \"registerRemote\\(remote, targetRemotes\" node_modules/@module-federation/runtime-core/dist/remote/index.js)",
-      "Bash(awk '{print \" \",$5,$9}')"
+      "Bash(awk '{print \" \",$5,$9}')",
+      "Bash(node -e \"const p=require\\('./node_modules/rsbuild-plugin-react-router/package.json'\\); console.log\\(Object.keys\\(p.dependencies||{}\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(cp app/routes/mfe1.tsx /tmp/mfe1.bak)",
+      "Bash(sed -i '' 's/export function meta\\({ loaderData }: Route.MetaArgs\\)/export function meta\\({ data }: Route.MetaArgs\\)/; s/return loaderData?.head?.title ? \\\\[{ title: loaderData.head.title }\\\\] : \\\\[\\\\]/return data?.head?.title ? [{ title: data.head.title }] : []/' app/routes/mfe1.tsx)",
+      "Bash(npx tsc *)",
+      "Bash(cp /tmp/mfe1.bak app/routes/mfe1.tsx)"
     ]
   }
 }

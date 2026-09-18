@@ -19,12 +19,17 @@ type Pages = {
       "*": string;
     };
   };
+  "/*": {
+    params: {
+      "*": string;
+    };
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/mfe1/*";
+    page: "/" | "/mfe1/*" | "/*";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -34,10 +39,15 @@ type RouteFiles = {
     id: "routes/mfe1";
     page: "/mfe1/*";
   };
+  "routes/not-found.tsx": {
+    id: "routes/not-found";
+    page: "/*";
+  };
 };
 
 type RouteModules = {
   "root": typeof import("./app/root.tsx");
   "routes/home": typeof import("./app/routes/home.tsx");
   "routes/mfe1": typeof import("./app/routes/mfe1.tsx");
+  "routes/not-found": typeof import("./app/routes/not-found.tsx");
 };

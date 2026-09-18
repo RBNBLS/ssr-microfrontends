@@ -47,6 +47,9 @@ Each of these cost real time. None are obvious from the symptom.
   consumption needs. Without it the browser dies at startup with
   `RUNTIME-006: Invalid loadShareSync`. This one produced three wrong diagnoses
   before being found — the error names neither the option nor the config object.
+  **Both projects need it.** The MFE went without for a while because the shell
+  reaches it through `loadRemote` (already async); only the standalone page at
+  :3001, which imports `clientEntry` synchronously, exposed it.
 - **Never set `pluginReactRouter({ federation: false })`.** It reads like a
   build-output switch; it is startup wiring for MF. Turning it off breaks the
   browser before the app boots.
@@ -102,13 +105,16 @@ contract or MFE count grows.
 ## Process hygiene
 
 - **Never `pkill -f "rsbuild dev"`** — it matches the shell *and* the MFE. Kill
-  by port instead: `lsof -ti:3000 | xargs kill -9`.
+  by port instead, **listeners only**: `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9`.
+  Without `-sTCP:LISTEN`, `lsof -i:PORT` also returns the *clients* connected to
+  that port — i.e. the browser. `lsof -ti:3000 | xargs kill -9` kills Chrome.
 - `@module-federation/dts-plugin` leaks a `fork-dev-worker.js` per dev session
   and never reaps it. They accumulate into dozens over a long session. Sweep with
   a path-scoped `ps aux | grep <project path>`.
-- **No git repo exists** in any of the three projects. A directory was lost once
-  this way and had to be reconstructed from conversation history. Confirm before
-  running anything destructive.
+- The repo root is a git repository now. It was not for most of the build —
+  a directory was lost once that way and had to be reconstructed from
+  conversation history. Still confirm before anything destructive; the owner
+  handles commits themselves.
 
 ---
 
