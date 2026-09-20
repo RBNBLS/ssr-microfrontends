@@ -24308,7 +24308,7 @@ __webpack_require__.d(__webpack_exports__, {
     });
     // Origin is irrelevant — only the path is used for matching. Headers are
     // forwarded so loaders can pass auth/cookies on to the API/BFF.
-    const request = new Request(new URL(url, 'http://mfe1.internal').href, {
+    const request = new Request(new URL(url, "http://mfe1.internal").href, {
         headers
     });
     const context = await handler.query(request);
@@ -24333,7 +24333,7 @@ __webpack_require__.d(__webpack_exports__, {
         html,
         data: context.loaderData,
         head: {
-            title: 'MFE1'
+            title: "MFE1"
         }
     };
 }

@@ -147,10 +147,8 @@ export default function Mfe1Mount() {
     let cancelled = false;
 
     async function loadRemoteMfe() {
-      const [mfeClientModule, capabilities] = await Promise.all([
-        loadRemote<Mfe1ClientEntry>("mfe1/clientEntry"),
-        loadRemote<Mfe1Capabilities>("mfe1/capabilities"),
-      ]);
+      const mfeClientModule =
+        await loadRemote<Mfe1ClientEntry>("mfe1/clientEntry");
       if (cancelled) return;
       if (!mfeClientModule) {
         throw new Error("mfe1/clientEntry unavailable (remote not registered)");
@@ -168,7 +166,6 @@ export default function Mfe1Mount() {
           },
         },
       });
-      console.log({ capabilities: capabilities?.addTwoNumbers(2, 2) });
     }
 
     loadRemoteMfe().catch((error) => {

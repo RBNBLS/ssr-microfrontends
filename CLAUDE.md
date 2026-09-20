@@ -5,8 +5,9 @@ service rendering HTML fragments. Built and verified end-to-end — treat it as
 working, not exploratory.
 
 **Read first:** `mfe-ssr-decision-record.md` (why it is built this way, every
-path tested and rejected) and `render-and-hydration-flow.md` (how a request
-actually flows). This file is the operational layer: landmines and conventions.
+path tested and rejected), `render-and-hydration-flow.md` (how a request
+actually flows) and `ssr-or-csr-who-decides.md` (what makes a given request
+server- or client-rendered — nothing decides; it is structural). This file is the operational layer: landmines and conventions.
 
 ---
 
