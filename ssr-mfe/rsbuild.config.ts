@@ -18,6 +18,7 @@ export default defineConfig({
     // Fail on a taken port rather than drift onto :3002 and shadow the
     // fragment server. (The shell does the same for :3000.)
     strictPort: true,
+    historyApiFallback: true,
   },
   environments: {
     // Browser build: the federated `clientEntry` the shell hydrates with, plus
