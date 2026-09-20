@@ -1,6 +1,6 @@
 import { loadRemote } from "@module-federation/enhanced/runtime";
 import { useEffect, useRef, useState } from "react";
-import { useLoaderData } from "react-router";
+import { useLoaderData, useLocation, useNavigate } from "react-router";
 import { MFE1_BASE } from "../mfeConfig";
 import { MFE1_FRAGMENT_URL, MFE_SSR_TIMEOUT_MS } from "../mfeConfig.server";
 import { peekHtml, putHtml } from "../mfeHtmlStore";
@@ -22,12 +22,24 @@ interface Fragment {
   head: { title: string };
 }
 
+/** What `clientEntry` hands back: the MFE's lifecycle, owned by this route. */
+interface Mfe1Handle {
+  /** The shell changed the URL; the MFE should follow. */
+  navigate(href: string): void;
+  unmount(): void;
+}
+
 /** `mfe1/clientEntry` — the browser half. */
 interface Mfe1ClientEntry {
   clientEntry(
     container: Element,
-    input: { data?: unknown; basePath: string },
-  ): void;
+    input: {
+      data?: unknown;
+      basePath: string;
+      /** Hosted mode: the shell owns window.history, the MFE routes in memory. */
+      host: { href: string; onNavigate(href: string): void };
+    },
+  ): Mfe1Handle;
 }
 
 /** `mfe1/capabilities` — plain functions the shell (or other MFEs) may call. */
@@ -117,30 +129,69 @@ export default function Mfe1Mount() {
       : undefined,
   );
   const containerRef = useRef<HTMLDivElement>(null);
-  const mountedRef = useRef(false);
+  const handleRef = useRef<Mfe1Handle | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Where the shell's router believes it is, readable from callbacks without
+  // re-running the mount effect on every navigation.
+  const href = location.pathname + location.search;
+  const hrefRef = useRef(href);
+  hrefRef.current = href;
 
   useEffect(() => {
-    if (mountedRef.current || !containerRef.current) return;
-    mountedRef.current = true;
     const container = containerRef.current;
+    if (!container) return;
+    // Set by the cleanup. Covers StrictMode's mount → unmount → mount in dev
+    // and a real unmount racing the async load: a load that resolves after
+    // cleanup must not mount into a container this route no longer owns.
+    let cancelled = false;
 
     async function loadRemoteMfe() {
       const [mfeClientModule, capabilities] = await Promise.all([
         loadRemote<Mfe1ClientEntry>("mfe1/clientEntry"),
         loadRemote<Mfe1Capabilities>("mfe1/capabilities"),
       ]);
+      if (cancelled) return;
       if (!mfeClientModule) {
         throw new Error("mfe1/clientEntry unavailable (remote not registered)");
       }
-      mfeClientModule.clientEntry(container, {
+      handleRef.current = mfeClientModule.clientEntry(container!, {
         data: initial?.data,
         basePath: MFE1_BASE,
+        host: {
+          href: hrefRef.current,
+          // MFE → shell. The shell is the only writer of window.history, so an
+          // in-MFE link becomes a shell navigation. `shouldRevalidate` above
+          // keeps that from re-running this route's loader.
+          onNavigate: (next) => {
+            if (next !== hrefRef.current) void navigate(next);
+          },
+        },
       });
       console.log({ capabilities: capabilities?.addTwoNumbers(2, 2) });
     }
 
-    loadRemoteMfe();
-  }, [initial]);
+    loadRemoteMfe().catch((error) => {
+      console.error("[shell] MFE1 client entry failed to load:", error);
+    });
+
+    return () => {
+      cancelled = true;
+      // Without this the MFE's React root outlives the route: detached from
+      // the DOM but still rendering.
+      handleRef.current?.unmount();
+      handleRef.current = null;
+    };
+  }, [initial, navigate]);
+
+  // Shell → MFE. Every shell navigation — its own links, back/forward, and the
+  // ones the MFE just asked for — ends here; the MFE ignores the ones it
+  // already knows about. Keyed on `location.key` so a navigation to the same
+  // pathname still counts.
+  useEffect(() => {
+    handleRef.current?.navigate(hrefRef.current);
+  }, [location.key]);
 
   return (
     <div
