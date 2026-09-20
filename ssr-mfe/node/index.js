@@ -24104,12 +24104,17 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
+/** Where the calling loader is running. 'server' on a page load (fragment
+ *  server or SSR preview); 'browser' on client-side navigation, standalone
+ *  CSR, or when the shell's fragment fetch failed and the MFE mounted
+ *  client-side instead. */ const renderedOn = ()=>typeof document === "undefined" ? "server" : "browser";
 // Stands in for a fetch() to a real API/BFF — the only backend-access
 // pattern an MFE loader is allowed (architecture doc, rule 2).
 async function fetchGreeting() {
     return {
-        message: "Hello from MFE1 — this content was rendered on the server.",
-        fetchedAt: new Date().toISOString()
+        message: "Hello from MFE1.",
+        fetchedAt: new Date().toISOString(),
+        renderedOn: renderedOn()
     };
 }
 function Layout() {
@@ -24165,7 +24170,7 @@ function Layout() {
     return t2;
 }
 function Home() {
-    const $ = (0,react_compiler_runtime__rspack_import_1.c)(7);
+    const $ = (0,react_compiler_runtime__rspack_import_1.c)(10);
     const loaderData = (0,react_router__rspack_import_4.useLoaderData)();
     let t0;
     if ($[0] !== loaderData.message) {
@@ -24178,33 +24183,81 @@ function Home() {
         t0 = $[1];
     }
     let t1;
-    if ($[2] !== loaderData.fetchedAt) {
-        t1 = /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("small", {
-            children: [
-                "fetched at ",
-                loaderData.fetchedAt
-            ]
-        }, void 0, true, void 0, this);
-        $[2] = loaderData.fetchedAt;
+    if ($[2] !== loaderData.renderedOn) {
+        t1 = /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("strong", {
+            children: loaderData.renderedOn
+        }, void 0, false, void 0, this);
+        $[2] = loaderData.renderedOn;
         $[3] = t1;
     } else {
         t1 = $[3];
     }
     let t2;
-    if ($[4] !== t0 || $[5] !== t1) {
-        t2 = /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("div", {
+    if ($[4] !== loaderData.fetchedAt || $[5] !== t1) {
+        t2 = /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("small", {
             children: [
-                t0,
-                t1
+                "rendered on: ",
+                t1,
+                " \xb7 fetched at",
+                " ",
+                loaderData.fetchedAt
             ]
         }, void 0, true, void 0, this);
-        $[4] = t0;
+        $[4] = loaderData.fetchedAt;
         $[5] = t1;
         $[6] = t2;
     } else {
         t2 = $[6];
     }
-    return t2;
+    let t3;
+    if ($[7] !== t0 || $[8] !== t2) {
+        t3 = /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("div", {
+            children: [
+                t0,
+                t2
+            ]
+        }, void 0, true, void 0, this);
+        $[7] = t0;
+        $[8] = t2;
+        $[9] = t3;
+    } else {
+        t3 = $[9];
+    }
+    return t3;
+}
+function About() {
+    const $ = (0,react_compiler_runtime__rspack_import_1.c)(3);
+    const { renderedOn } = (0,react_router__rspack_import_4.useLoaderData)();
+    let t0;
+    if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+        t0 = /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("p", {
+            children: "MFE1 about route."
+        }, void 0, false, void 0, this);
+        $[0] = t0;
+    } else {
+        t0 = $[0];
+    }
+    let t1;
+    if ($[1] !== renderedOn) {
+        t1 = /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("div", {
+            children: [
+                t0,
+                /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("small", {
+                    children: [
+                        "rendered on: ",
+                        /*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("strong", {
+                            children: renderedOn
+                        }, void 0, false, void 0, this)
+                    ]
+                }, void 0, true, void 0, this)
+            ]
+        }, void 0, true, void 0, this);
+        $[1] = renderedOn;
+        $[2] = t1;
+    } else {
+        t1 = $[2];
+    }
+    return t1;
 }
 const routes = [
     {
@@ -24219,13 +24272,11 @@ const routes = [
             },
             {
                 path: "about",
-                Component: ()=>/*#__PURE__*/ (0,react_jsx_dev_runtime__rspack_import_0.jsxDEV)("p", {
-                        children: "MFE1 about route — client-side navigation."
-                    }, void 0, false, {
-                        fileName: "/Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/src/routes.tsx",
-                        lineNumber: 54,
-                        columnNumber: 26
-                    }, undefined)
+                // Direct load → 'server'; reached by clicking from Home → 'browser'.
+                loader: ()=>({
+                        renderedOn: renderedOn()
+                    }),
+                Component: About
             }
         ]
     }

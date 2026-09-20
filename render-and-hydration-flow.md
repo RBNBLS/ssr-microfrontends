@@ -92,7 +92,8 @@ a crawler with no JavaScript sees real content:
 <div id="mfe1-root">
   <div style="border:2px dashed #999…">
     <strong>MFE1</strong> …
-    <p>Hello from MFE1 — this content was rendered on the server.</p>
+    <p>Hello from MFE1.</p>
+    <small>rendered on: <strong>server</strong> · fetched at …</small>
   </div>
 </div>
 ```
