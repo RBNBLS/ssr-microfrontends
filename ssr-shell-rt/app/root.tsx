@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import { buildMfeRegistry } from "./mfeConfig.server";
 import { registerMfeRemotes } from "./mfeRegistry";
+import { useCapabilities } from "./useCapabilities";
 
 // Server-only: reads env, so it never reaches the browser bundle. React Router
 // serialises the return value into the document as ordinary loader data, which
@@ -44,6 +45,8 @@ export default function Root() {
   // In render, not an effect — see registerMfeRemotes. Idempotent, so React's
   // double-render in development is harmless.
   registerMfeRemotes(mfeRegistry);
+  const capabilities = useCapabilities(mfeRegistry);
+  console.log("dada", capabilities.mfe1?.addTwoNumbers(1, 3));
 
   return <Outlet />;
 }

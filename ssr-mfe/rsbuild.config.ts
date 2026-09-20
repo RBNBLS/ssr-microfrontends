@@ -60,7 +60,7 @@ export default defineConfig({
         name: "mfe1",
         exposes: {
           "./clientEntry": "./src/clientEntry.tsx",
-          "./capabilities": "./src/capabilities.ts",
+          "./capabilities": "./src/capabilities.tsx",
         },
         shared,
         experiments: { asyncStartup: true },
