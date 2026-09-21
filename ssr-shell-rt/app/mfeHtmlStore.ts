@@ -9,22 +9,22 @@
 // but is used exclusively during SSR; on the client the DOM already holds the
 // markup, so nothing reads from it.
 
-const TTL_MS = 10_000
+const TTL_MS = 10_000;
 
-const store = new Map<string, { html: string; at: number }>()
+const store = new Map<string, { html: string; at: number }>();
 
 function sweep() {
-  const cutoff = Date.now() - TTL_MS
+  const cutoff = Date.now() - TTL_MS;
   for (const [token, entry] of store) {
-    if (entry.at < cutoff) store.delete(token)
+    if (entry.at < cutoff) store.delete(token);
   }
 }
 
 export function putHtml(html: string): string {
-  sweep()
-  const token = crypto.randomUUID()
-  store.set(token, { html, at: Date.now() })
-  return token
+  sweep();
+  const token = crypto.randomUUID();
+  store.set(token, { html, at: Date.now() });
+  return token;
 }
 
 /**
@@ -33,5 +33,5 @@ export function putHtml(html: string): string {
  * undefined on the second pass. Entries expire via `sweep()` instead.
  */
 export function peekHtml(token: string): string | undefined {
-  return store.get(token)?.html
+  return store.get(token)?.html;
 }

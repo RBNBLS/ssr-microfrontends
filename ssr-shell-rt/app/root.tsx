@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import { buildMfeRegistry } from "./mfeConfig.server";
 import { registerMfeRemotes } from "./mfeRegistry";
+import { ErrorBoundary } from "react-error-boundary";
 
 // Server-only: reads env, so it never reaches the browser bundle. React Router
 // serialises the return value into the document as ordinary loader data, which
@@ -45,5 +46,15 @@ export default function Root() {
   // double-render in development is harmless.
   registerMfeRemotes(mfeRegistry);
 
-  return <Outlet />;
+  return (
+    <ErrorBoundary
+      fallbackRender={({ error }) => (
+        <div>
+          Oopsie something happens {`${JSON.stringify(error, null, 2)}`}{" "}
+        </div>
+      )}
+    >
+      <Outlet />
+    </ErrorBoundary>
+  );
 }
