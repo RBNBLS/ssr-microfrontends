@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
 import { pluginReactRouter } from "rsbuild-plugin-react-router";
@@ -10,9 +11,20 @@ const shared = {
 };
 
 export default defineConfig({
-  // strictPort: a second `npm run dev` fails instead of silently taking the
-  // next free port — which is the MFE fragment server's, and shadows it.
   server: { port: 3000, strictPort: true },
+  tools: {
+    rspack(config, { rspack, isDev }) {
+      if (!isDev) return;
+      config.plugins.push(
+        new rspack.NormalModuleReplacementPlugin(
+          /[\\/]react-refresh[\\/]runtime\.js$/,
+          fileURLToPath(
+            new URL("./scripts/react-refresh-singleton.cjs", import.meta.url),
+          ),
+        ),
+      );
+    },
+  },
   plugins: [
     pluginReactRouter({ federation: true }),
     pluginReact(),
