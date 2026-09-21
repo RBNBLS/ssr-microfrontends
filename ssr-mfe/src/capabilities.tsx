@@ -8,7 +8,7 @@ export function addTwoNumbers(a: number, b: number) {
 }
 
 export interface GreetingInput {
-  text: string;
+  text: string | undefined;
 }
 
 /** Lifecycle of a mounted widget, owned by whoever mounted it. */
@@ -20,7 +20,7 @@ export interface WidgetHandle<Input> {
 function Greeting({ text }: GreetingInput) {
   return (
     <div style={{ border: "1px dashed #999", padding: 8, borderRadius: 8 }}>
-      <strong>MFE1 widget:</strong> {text}
+      <strong>MFE widget mode:</strong> {text}
     </div>
   );
 }
