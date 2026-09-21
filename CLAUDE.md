@@ -106,12 +106,16 @@ contract or MFE count grows.
 ## Process hygiene
 
 - **Never `pkill -f "rsbuild dev"`** — it matches the shell *and* the MFE. Kill
-  by port instead, **listeners only**: `lsof -ti:3000 -sTCP:LISTEN | xargs kill -9`.
+  by port instead, **listeners only**: `lsof -ti:3000 -sTCP:LISTEN | xargs kill`.
   Without `-sTCP:LISTEN`, `lsof -i:PORT` also returns the *clients* connected to
   that port — i.e. the browser. `lsof -ti:3000 | xargs kill -9` kills Chrome.
-- `@module-federation/dts-plugin` leaks a `fork-dev-worker.js` per dev session
-  and never reaps it. They accumulate into dozens over a long session. Sweep with
-  a path-scoped `ps aux | grep <project path>`.
+- **SIGTERM, not `-9`.** The dev server spawns helpers (`fork-dev-worker.js` from
+  `@module-federation/dts-plugin`, `typegen --watch` from the RR plugin) and
+  reaps them only in its shutdown handlers. `kill -9` skips those, so every
+  helper is orphaned to PID 1 — 35 accumulated this way. Plain `kill` (or
+  Ctrl-C) leaves nothing behind; verified. Reach for `-9` only if SIGTERM
+  didn't free the port, then sweep orphans with
+  `ps -axo pid,ppid,command | grep <project path> | awk '$2==1'`.
 - The repo root is a git repository now. It was not for most of the build —
   a directory was lost once that way and had to be reconstructed from
   conversation history. Still confirm before anything destructive; the owner
