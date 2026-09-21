@@ -79,7 +79,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname === "/" && req.method === "GET") {
+  if (url.pathname === "/preview" && req.method === "GET") {
     try {
       const result = await serverEntry({
         url: url.searchParams.get("path") ?? "/",
