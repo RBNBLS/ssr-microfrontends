@@ -31,21 +31,51 @@ async function readJson(req: IncomingMessage): Promise<ServerEntryInput> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-/** Dev-only: lets an MFE developer see their own SSR output without the shell. */
-function previewPage(html: string, title: string) {
+/** Where the browser build is served (`rsbuild dev`). */
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? "http://localhost:3001";
+const PREVIEW_BASE = "/preview";
+
+/** The browser build's script and stylesheet tags, taken from its own
+ *  index.html so hashed chunk names never need restating here. Empty when the
+ *  dev server is down — the preview then shows the server markup only. */
+async function clientAssetTags(): Promise<string> {
+  try {
+    const page = await (await fetch(`${CLIENT_ORIGIN}/`)).text();
+    const head = page.slice(0, page.indexOf("</head>"));
+    return (head.match(/<script\b[^>]*><\/script>|<link\b[^>]*>/g) ?? []).join(
+      "\n    ",
+    );
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Dev-only: SSR then hydrate, the way the shell does it, without the shell.
+ * `index.tsx` finds `#mfe-preview` and hands its data to `clientEntry`, which
+ * hydrates because `#root` already holds markup.
+ */
+function previewPage(html: string, data: unknown, title: string, assets: string) {
+  // `<` escaped so loader data can't close the script element early.
+  const payload = JSON.stringify({ data, basePath: PREVIEW_BASE }).replace(
+    /</g,
+    "\\u003c",
+  );
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>${title} — SSR preview</title>
+    ${assets}
   </head>
   <body>
     <p style="font:14px system-ui;color:#666">
-      Server-render preview. This is exactly the markup the shell embeds —
-      no hydration. For the interactive app, use the dev server on :3001.
+      SSR preview: server-rendered here, hydrated by the :3001 bundle — the
+      path the shell takes.${assets ? "" : " <strong>:3001 is down, so no hydration.</strong>"}
     </p>
     <hr />
-    ${html}
+    <div id="root">${html}</div>
+    <script type="application/json" id="mfe-preview">${payload}</script>
   </body>
 </html>`;
 }
@@ -79,16 +109,24 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname === "/preview" && req.method === "GET") {
+  // Mounted at /preview like the shell mounts it at /mfe1, so the MFE's links
+  // stay inside the preview and a reload on any of them server-renders again.
+  const inPreview =
+    url.pathname === PREVIEW_BASE ||
+    url.pathname.startsWith(`${PREVIEW_BASE}/`);
+  if (inPreview && req.method === "GET") {
     try {
-      const result = await serverEntry({
-        url: url.searchParams.get("path") ?? "/",
-        basePath: "",
-      });
+      const [result, assets] = await Promise.all([
+        serverEntry({
+          url: url.pathname + url.search,
+          basePath: PREVIEW_BASE,
+        }),
+        clientAssetTags(),
+      ]);
       res.writeHead(result.status, {
         "Content-Type": "text/html; charset=utf-8",
       });
-      res.end(previewPage(result.html, result.head.title));
+      res.end(previewPage(result.html, result.data, result.head.title, assets));
     } catch (error) {
       res.writeHead(500, { "Content-Type": "text/plain" });
       res.end(String(error));
@@ -101,6 +139,6 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[mfe1] fragment server on http://localhost:${PORT}`);
-  console.log("[mfe1]   POST /__fragment   contract endpoint");
-  console.log("[mfe1]   GET  /preview?path=/about SSR preview");
+  console.log("[mfe1]   POST /__fragment      contract endpoint");
+  console.log("[mfe1]   GET  /preview/about   SSR + hydrate preview");
 });

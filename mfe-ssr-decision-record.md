@@ -185,7 +185,7 @@ throwaway directory before committing.
 | Endpoint | Purpose |
 | --- | --- |
 | `POST /__fragment` | The contract. `{url, headers, basePath}` → `{html, status, data, head}` |
-| `GET /?path=…` | SSR preview — lets an MFE developer inspect their own server output without the shell |
+| `GET /preview/*` | SSR + hydrate preview — the shell's render path without the shell: server markup plus loader data, hydrated by the :3001 bundle |
 | `GET /health` | Liveness |
 
 ### How each half of the contract is typed

@@ -83,6 +83,7 @@ export function clientEntry(
 
   const element = <RouterProvider router={router} />;
   let root: ReturnType<typeof createRoot>;
+
   if (container.hasChildNodes()) {
     root = hydrateRoot(container, element);
   } else {
