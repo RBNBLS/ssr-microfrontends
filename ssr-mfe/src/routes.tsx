@@ -1,4 +1,11 @@
-import { Link, Outlet, useLoaderData } from 'react-router'
+import {
+  isRouteErrorResponse,
+  Link,
+  Outlet,
+  useLoaderData,
+  useRouteError,
+} from 'react-router'
+import type { ReactNode } from 'react'
 import type { RouteObject } from 'react-router'
 
 type RenderedOn = 'server' | 'browser'
@@ -26,7 +33,7 @@ async function fetchGreeting(): Promise<GreetingData> {
   }
 }
 
-function Layout() {
+function Frame({ children }: { children: ReactNode }) {
   return (
     <div style={{ border: '2px dashed #999', padding: 12, borderRadius: 8 }}>
       <strong>MFE1</strong> (own router, basename passed by the shell)
@@ -34,8 +41,32 @@ function Layout() {
         <Link to="/">Home</Link>
         <Link to="/about">About</Link>
       </nav>
-      <Outlet />
+      {children}
     </div>
+  )
+}
+
+function Layout() {
+  return (
+    <Frame>
+      <Outlet />
+    </Frame>
+  )
+}
+
+// Replaces React Router's dev-only default screen. Keeps the frame and nav so
+// an unknown path inside MFE1 is still navigable; the 404 itself reaches the
+// shell as `status` on the fragment.
+function ErrorBoundary() {
+  const error = useRouteError()
+  return (
+    <Frame>
+      <p>
+        {isRouteErrorResponse(error) && error.status === 404
+          ? 'Not found.'
+          : 'Something went wrong.'}
+      </p>
+    </Frame>
   )
 }
 
@@ -68,6 +99,7 @@ export const routes: Array<RouteObject> = [
   {
     path: '/',
     Component: Layout,
+    ErrorBoundary,
     children: [
       {
         id: 'home',

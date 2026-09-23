@@ -4,8 +4,8 @@
 // `serverEntry` function over HTTP so the shell can render this MFE without
 // loading its code into the shell's process.
 //
-// Contract (identical to the in-process version it replaced):
-//   POST /__fragment  { url, headers, basePath } -> { html, data, head }
+// Contract:
+//   POST /__fragment  { url, headers, basePath } -> { html, status, data, head }
 
 import {
   createServer,
@@ -85,7 +85,9 @@ const server = createServer(async (req, res) => {
         url: url.searchParams.get("path") ?? "/",
         basePath: "",
       });
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(result.status, {
+        "Content-Type": "text/html; charset=utf-8",
+      });
       res.end(previewPage(result.html, result.head.title));
     } catch (error) {
       res.writeHead(500, { "Content-Type": "text/plain" });
@@ -100,5 +102,5 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`[mfe1] fragment server on http://localhost:${PORT}`);
   console.log("[mfe1]   POST /__fragment   contract endpoint");
-  console.log("[mfe1]   GET  /?path=/about SSR preview");
+  console.log("[mfe1]   GET  /preview?path=/about SSR preview");
 });

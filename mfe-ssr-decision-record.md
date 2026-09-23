@@ -25,7 +25,7 @@ Browser
    ▼
 ┌─────────────────────────────┐        POST /__fragment
 │  Shell (React Router FW)    │ ──────────────────────────►  MFE1 fragment server
-│  • owns the document        │ ◄──────────────────────────  { html, data, head }
+│  • owns the document        │ ◄──────────────────────────  { html, status, data, head }
 │  • only SEO-bearing SSR     │        (own process)
 │  • splat route /mfe1/*      │
 └─────────────────────────────┘ ──────────────────────────►  MFE2, MFE3 …
@@ -38,7 +38,7 @@ MFE1 clientEntry ── hydrates its own subtree, owns routing under /mfe1/*
 **The contract, unchanged across every variant we tested:**
 
 ```
-{ url, headers, basePath }  →  { html, data, head }
+{ url, headers, basePath }  →  { html, status, data, head }
 ```
 
 ### What has been verified
@@ -121,7 +121,7 @@ the trade this architecture accepts deliberately.
 
 ### 2.5 "Owns a server" does not mean "needs a framework"
 
-The MFE's server has one job: accept a request, return `{ html, data, head }`.
+The MFE's server has one job: accept a request, return `{ html, status, data, head }`.
 The function already existed, so the server is a thin wrapper around it — Node's
 built-in `http`, no framework, no new dependency. The MFE got *simpler* when it
 gained a server.
@@ -184,7 +184,7 @@ throwaway directory before committing.
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /__fragment` | The contract. `{url, headers, basePath}` → `{html, data, head}` |
+| `POST /__fragment` | The contract. `{url, headers, basePath}` → `{html, status, data, head}` |
 | `GET /?path=…` | SSR preview — lets an MFE developer inspect their own server output without the shell |
 | `GET /health` | Liveness |
 
@@ -220,7 +220,7 @@ sequenceDiagram
     M->>A: fetch orders (forwarded headers)
     A-->>M: data
     M->>M: renderToString
-    M-->>S: { html, data, head }
+    M-->>S: { html, status, data, head }
     S->>S: merge head, embed html,<br/>keep html out of hydration payload
     S-->>B: HTML document (shell + MFE fragment)
 

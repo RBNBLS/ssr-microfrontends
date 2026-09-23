@@ -1,6 +1,6 @@
 import { loadRemote } from "@module-federation/enhanced/runtime";
 import { useEffect, useRef, useState } from "react";
-import { useLoaderData, useLocation, useNavigate } from "react-router";
+import { data, useLoaderData, useLocation, useNavigate } from "react-router";
 import { MFE1_BASE } from "../mfeConfig";
 import { MFE1_FRAGMENT_URL, MFE_SSR_TIMEOUT_MS } from "../mfeConfig.server";
 import { peekHtml, putHtml } from "../mfeHtmlStore";
@@ -19,6 +19,8 @@ import type { Route } from "./+types/mfe1";
 /** `POST /__fragment` response — the server half. */
 interface Fragment {
   html: string;
+  /** Document status the MFE asks for, e.g. 404 for a path it doesn't know. */
+  status: number;
   data: Record<string, unknown>;
   head: { title: string };
 }
@@ -87,11 +89,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     // `html` deliberately does NOT go into loader data — only a token does.
     // `data` and `head` do: the MFE's client router needs `data` to hydrate
     // without refetching, and both are small.
-    return {
-      data: result.data,
-      head: result.head,
-      htmlToken: putHtml(result.html),
-    };
+    return data(
+      {
+        data: result.data,
+        head: result.head,
+        htmlToken: putHtml(result.html),
+      },
+      { status: result.status },
+    );
   } catch (error) {
     // The MFE is a fragment, not the page. A broken or slow one costs SEO for
     // that fragment and falls back to client rendering — it must never take

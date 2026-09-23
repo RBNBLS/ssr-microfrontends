@@ -30,6 +30,9 @@ export default defineConfig({
       output: {
         target: "web",
       },
+      html: {
+        title: "MFE1",
+      },
     },
     // Fragment server: a plain Node service wrapping `serverEntry` over HTTP.
     // No Module Federation here — the shell fetches rendered HTML rather than

@@ -16,6 +16,9 @@ export interface ServerEntryInput {
 
 export interface ServerEntryResult {
   html: string;
+  /** The document status this fragment asks for — 404 for an unknown path
+   *  inside the MFE. The render itself succeeded either way. */
+  status: number;
   data: unknown;
   head: { title: string };
 }
@@ -30,13 +33,19 @@ export async function serverEntry({
   headers = {},
   basePath,
 }: ServerEntryInput): Promise<ServerEntryResult> {
-  const handler = createStaticHandler(routes, { basename: basePath });
-
   // Origin is irrelevant — only the path is used for matching. Headers are
   // forwarded so loaders can pass auth/cookies on to the API/BFF.
-  const request = new Request(new URL(url, "http://mfe1.internal").href, {
-    headers,
-  });
+  const target = new URL(url, "http://mfe1.internal");
+
+  // Outside basePath the static router renders an empty string and still
+  // reports success. That is a caller bug, so fail and let the shell fall back.
+  const { pathname } = target;
+  if (basePath && pathname !== basePath && !pathname.startsWith(`${basePath}/`)) {
+    throw new Error(`${pathname} is outside basePath ${basePath}`);
+  }
+
+  const handler = createStaticHandler(routes, { basename: basePath });
+  const request = new Request(target.href, { headers });
 
   const context = await handler.query(request);
   if (context instanceof Response) {
@@ -55,6 +64,7 @@ export async function serverEntry({
 
   return {
     html,
+    status: context.statusCode,
     data: context.loaderData,
     head: { title: "MFE1" },
   };

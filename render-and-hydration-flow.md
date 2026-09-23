@@ -31,7 +31,7 @@ sequenceDiagram
     S->>S: match /mfe1/* splat route
     S->>M: POST /__fragment { url, headers, basePath }
     M->>M: createStaticHandler → query → createStaticRouter → renderToString
-    M-->>S: { html, data, head }
+    M-->>S: { html, status, data, head }
     S->>S: embed html, merge head
     S-->>B: one HTML document
 ```
