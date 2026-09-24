@@ -190,19 +190,27 @@ throwaway directory before committing.
 
 ### How each half of the contract is typed
 
-The two halves are typed by different mechanisms, which is worth knowing when
-one of them drifts:
+Both halves come from one package, `@platform/mfe-contract` (`mfe-contract/`
+in this repo, a `file:` dependency standing in for a registry package). The
+contract is the platform's, not MFE1's: every MFE implements the same shape,
+and only `data` varies, hence a type parameter.
 
-- **Browser half** (`clientEntry`) — declared by hand, next to the call site in
-  `app/routes/mfe1.tsx`. MF *can* generate this from the remote's real exports
-  via its DTS plugin, but only if a remote is declared at build time — and that
-  declaration also bakes the remote's URL into the browser bundle, defeating the
-  runtime registry (§2.7). For a two-function contract, hand-declaring is the
-  smaller cost. Revisit when the contract or MFE count grows.
-- **Server half** (`/__fragment`) — an HTTP boundary, so it is typed by hand on
-  the shell side. This one *can* drift and is the half that needs versioning
-  discipline: additive changes first, and a version field when it stops being
-  additive.
+- **Compile time.** The MFE implements the types (`satisfies ClientEntryModule`),
+  the shell imports them. A change one side doesn't expect fails that side's
+  build.
+- **Runtime.** Shell and MFEs deploy independently, so compiling against the
+  same types says nothing about what is running. Each side reports the
+  `CONTRACT_VERSION` it was built against — in `FragmentResponse` and as an
+  export of the `clientEntry` module — and the shell checks it before use. A
+  mismatched fragment is treated like any failure (client rendering); a
+  mismatched browser bundle isn't mounted, leaving server markup static.
+  Verified in a browser by bumping each side's version in turn.
+
+Why not MF's generated types: its DTS plugin needs either a build-time
+`remotes` declaration, which bakes the URL in (§2.7), or its dev-only runtime
+hook (`dynamic-remote-type-hints-plugin`), which fetches types only after a
+browser registers the remote — never in CI. And it could only ever cover the
+browser half: `/__fragment` is JSON, not a module.
 
 ### Request sequence
 
@@ -295,8 +303,8 @@ statements no longer hold:
 
 What survives unchanged: MFEs contain universal React; they reach backends only
 through APIs/BFFs; code must be SSR-safe; React/React-DOM/router are shared
-singletons in the browser; and the federation contract stays explicit — declared
-by hand on both halves, for the reasons in §3.
+singletons in the browser; and the federation contract stays explicit — one shared, versioned contract
+package for both halves (§3).
 
 **One rule to add:** MFE server code must hold no mutable module-scope state.
 The fragment server handles many requests in one process, so module-level
@@ -324,9 +332,10 @@ mutable state leaks across users.
    without wiping the server markup, and navigation *inside* the MFE is
    client-side. The only hydration warning observed came from a browser
    extension (`cz-shortcut-listen` on `<body>`, ColorZilla), not the app.
-2. **Version skew between server and browser.** A deploy can leave the fragment
-   server on one version while browsers still load the previous client bundle.
-   Needs a deliberate strategy.
+2. **Version skew between server and browser.** Shell ↔ MFE skew is handled by
+   the contract version check (§3). Still open: a deploy can leave one MFE's
+   fragment server on one release while browsers load its previous client
+   bundle — same contract major, different markup. Needs a deliberate strategy.
 3. **Request context is minimal.** Only `headers` crosses today. Locale, user,
    tenant and feature flags will need an explicit, versioned slot — keep it
    small or it becomes a dumping ground.

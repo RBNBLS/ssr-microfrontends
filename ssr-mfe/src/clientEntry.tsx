@@ -4,35 +4,16 @@ import {
   createMemoryRouter,
   RouterProvider,
 } from "react-router";
+import {
+  CONTRACT_VERSION,
+  type ClientEntryHandle,
+  type ClientEntryInput,
+  type ClientEntryModule,
+} from "@platform/mfe-contract";
 import { routes } from "./routes";
 
-export interface ClientEntryInput {
-  /** Loader data from `serverEntry`, handed over by the shell as plain data.
-   *  Absent when SSR failed and the shell fell back to client rendering. */
-  data?: Record<string, unknown>;
-  /** Must match the `basePath` the shell sent to the fragment server. */
-  basePath: string;
-  /**
-   * Present when mounted inside a host. The host then owns `window.history`
-   * outright: this MFE routes in memory and asks the host to change the URL.
-   * Absent when standalone, where this MFE is the only router on the page.
-   */
-  host?: {
-    /** The address bar right now — `pathname + search`, basePath included. */
-    href: string;
-    /** This MFE navigated; the host should make the URL `href`. */
-    onNavigate(href: string): void;
-  };
-}
-
-/** What the host gets back — the MFE's lifecycle, owned by whoever mounted it. */
-export interface ClientEntryHandle {
-  /** The host changed the URL (its own link, back/forward); follow it.
-   *  `href` is `pathname + search` with basePath. No-op if already there. */
-  navigate(href: string): void;
-  /** Unmount the React root and release the router. */
-  unmount(): void;
-}
+// Exposed as `./clientEntry`; hosts check this before calling `clientEntry`.
+export const contractVersion = CONTRACT_VERSION;
 
 /**
  * Federated client entry — called by the shell's browser code after the shell
@@ -104,3 +85,6 @@ export function clientEntry(
     },
   };
 }
+
+// Compile-time: this module is what hosts get from `loadRemote`.
+({ clientEntry, contractVersion }) satisfies ClientEntryModule;

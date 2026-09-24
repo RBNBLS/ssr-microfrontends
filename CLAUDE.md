@@ -84,10 +84,20 @@ Each of these cost real time. None are obvious from the symptom.
 
 ### Types
 
-The federation contract is **hand-declared** in `app/routes/mfe1.tsx`, both
-halves. MF can generate the browser half, but only with a build-time `remotes`
-declaration — which reintroduces the baked-URL problem. Revisit only if the
-contract or MFE count grows.
+Both halves of the contract (`FragmentRequest`/`FragmentResponse`,
+`ClientEntryInput`/`ClientEntryHandle`/`ClientEntryModule`) come from
+**`mfe-contract/`** (`@platform/mfe-contract`), installed in both projects as a
+`file:` dependency — a stand-in for a registry package once shell and MFEs are
+separate repos. It must not import any package: it sits outside both projects.
+The MFE implements it (`satisfies ClientEntryModule`); the shell imports it.
+Each side also reports the `CONTRACT_VERSION` it was built against, and the
+shell checks it (`isCompatible`) before using a fragment or a `clientEntry` —
+same types at compile time don't mean same types at runtime across independent
+deploys. Bump it on any breaking change.
+
+MF's own generated types (`dts`) aren't used: with runtime-registered remotes
+they only arrive in dev, after a browser opens the page — never in CI. Only
+MFE-specific extras (`app/mfeCapabilities.ts`) are still hand-declared.
 
 ### Dead ends — do not re-attempt
 
@@ -142,9 +152,12 @@ contract or MFE count grows.
 
 ## Open items
 
-1. **Version skew on deploy** — the fragment server and browser bundle can drift
-   apart mid-deploy. No strategy yet. Candidate: have the fragment response carry
-   the matching client bundle's version.
+1. **Version skew on deploy** — *shell ↔ MFE* skew is handled: a contract major
+   mismatch falls back to client rendering (fragment) or leaves the server
+   markup static (browser bundle). Still open: skew *within* one MFE — fragment
+   server and browser bundle on the same contract major but different releases,
+   so hydration sees markup from one and code from the other. Candidate: have
+   the fragment response carry the matching client bundle's version.
 2. **Request context is minimal** — only `headers` crosses. Locale, user, tenant
    and flags will need an explicit versioned slot; keep it small.
 3. **`validate:mfe` unbuilt** — should cover no mutable module-scope state (a

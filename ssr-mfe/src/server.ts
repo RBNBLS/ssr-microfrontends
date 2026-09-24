@@ -4,15 +4,16 @@
 // `serverEntry` function over HTTP so the shell can render this MFE without
 // loading its code into the shell's process.
 //
-// Contract:
-//   POST /__fragment  { url, headers, basePath } -> { html, status, data, head }
+// Contract (@platform/mfe-contract):
+//   POST /__fragment  FragmentRequest -> FragmentResponse
 
 import {
   createServer,
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { serverEntry, type ServerEntryInput } from "./serverEntry";
+import type { FragmentRequest } from "@platform/mfe-contract";
+import { serverEntry } from "./serverEntry";
 
 const PORT = Number(process.env.PORT ?? 3002);
 
@@ -25,7 +26,7 @@ function json(res: ServerResponse, status: number, body: unknown) {
   res.end(payload);
 }
 
-async function readJson(req: IncomingMessage): Promise<ServerEntryInput> {
+async function readJson(req: IncomingMessage): Promise<FragmentRequest> {
   const chunks: Array<Buffer> = [];
   for await (const chunk of req) chunks.push(chunk as Buffer);
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));

@@ -4,24 +4,12 @@ import {
   createStaticRouter,
   StaticRouterProvider,
 } from "react-router";
+import {
+  CONTRACT_VERSION,
+  type FragmentRequest,
+  type FragmentResponse,
+} from "@platform/mfe-contract";
 import { routes } from "./routes";
-
-export interface ServerEntryInput {
-  url: string;
-  headers?: Record<string, string>;
-  /** Where the shell has mounted this MFE. The shell owns the URL space; the
-   *  MFE owns everything below this path. Never hardcode it here. */
-  basePath: string;
-}
-
-export interface ServerEntryResult {
-  html: string;
-  /** The document status this fragment asks for — 404 for an unknown path
-   *  inside the MFE. The render itself succeeded either way. */
-  status: number;
-  data: unknown;
-  head: { title: string };
-}
 
 /**
  * Renders this MFE to an HTML fragment. Called over HTTP by the shell's server
@@ -32,7 +20,7 @@ export async function serverEntry({
   url,
   headers = {},
   basePath,
-}: ServerEntryInput): Promise<ServerEntryResult> {
+}: FragmentRequest): Promise<FragmentResponse> {
   // Origin is irrelevant — only the path is used for matching. Headers are
   // forwarded so loaders can pass auth/cookies on to the API/BFF.
   const target = new URL(url, "http://mfe1.internal");
@@ -63,6 +51,7 @@ export async function serverEntry({
   );
 
   return {
+    contractVersion: CONTRACT_VERSION,
     html,
     status: context.statusCode,
     data: context.loaderData,

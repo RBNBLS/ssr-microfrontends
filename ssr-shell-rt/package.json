@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@platform/mfe-contract": "file:../mfe-contract",
     "@react-router/node": "^8.4.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
