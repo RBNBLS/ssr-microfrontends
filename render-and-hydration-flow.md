@@ -27,9 +27,9 @@ sequenceDiagram
     participant S as Shell server (:3000)
     participant M as MFE fragment server (:3002)
 
-    B->>S: GET /mfe1/about
+    B->>S: GET /en/mfe1/about
     S->>S: match /mfe1/* splat route
-    S->>M: POST /__fragment { url, headers, basePath }
+    S->>M: POST /__fragment { url, headers, basePath, context }
     M->>M: createStaticHandler → query → createStaticRouter → renderToString
     M-->>S: { html, status, data, head }
     S->>S: embed html, merge head
@@ -68,7 +68,7 @@ Its splat route calls the fragment endpoint, then embeds the result:
 
 ```tsx
 // app/routes/mfe1.tsx
-const result = await fetchFragment(MFE1_FRAGMENT_URL, { url, headers, basePath })
+const result = await fetchFragment(MFE1_FRAGMENT_URL, { url, headers, basePath, context })
 
 return {
   data:      result.data,          // → handed to clientEntry later
@@ -162,7 +162,7 @@ if (container.hasChildNodes()) {
 | Piece | Why |
 | --- | --- |
 | `createBrowserRouter` | The **live** router — listens to history, re-renders on navigation. Makes in-MFE links instant. |
-| `basename` | Told by the shell, so `<Link to="/about">` produces `/mfe1/about`. |
+| `basename` | Told by the shell, so `<Link to="/about">` produces `/en/mfe1/about`. |
 | `hydrationData` | "The server already fetched this." Without it the loader re-runs — a wasted request plus a flash of dataless UI. |
 | `hasChildNodes()` branch | Hydrate existing markup, or mount fresh when the shell's fragment fetch failed. |
 

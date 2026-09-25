@@ -12,7 +12,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import type { FragmentRequest } from "@platform/mfe-contract";
+import type { FragmentRequest, MfeContext } from "@platform/mfe-contract";
 import { serverEntry } from "./serverEntry";
 
 const PORT = Number(process.env.PORT ?? 3002);
@@ -56,9 +56,15 @@ async function clientAssetTags(): Promise<string> {
  * `index.tsx` finds `#mfe-preview` and hands its data to `clientEntry`, which
  * hydrates because `#root` already holds markup.
  */
-function previewPage(html: string, data: unknown, title: string, assets: string) {
+function previewPage(
+  html: string,
+  data: unknown,
+  context: MfeContext,
+  title: string,
+  assets: string,
+) {
   // `<` escaped so loader data can't close the script element early.
-  const payload = JSON.stringify({ data, basePath: PREVIEW_BASE }).replace(
+  const payload = JSON.stringify({ data, basePath: PREVIEW_BASE, context }).replace(
     /</g,
     "\\u003c",
   );
@@ -117,17 +123,22 @@ const server = createServer(async (req, res) => {
     url.pathname.startsWith(`${PREVIEW_BASE}/`);
   if (inPreview && req.method === "GET") {
     try {
+      // Standing in for the shell's choice: `?locale=fr`.
+      const context = { locale: url.searchParams.get("locale") ?? "en" };
       const [result, assets] = await Promise.all([
         serverEntry({
           url: url.pathname + url.search,
           basePath: PREVIEW_BASE,
+          context,
         }),
         clientAssetTags(),
       ]);
       res.writeHead(result.status, {
         "Content-Type": "text/html; charset=utf-8",
       });
-      res.end(previewPage(result.html, result.data, result.head.title, assets));
+      res.end(
+        previewPage(result.html, result.data, context, result.head.title, assets),
+      );
     } catch (error) {
       res.writeHead(500, { "Content-Type": "text/plain" });
       res.end(String(error));

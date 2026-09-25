@@ -9,6 +9,7 @@ import {
   type FragmentRequest,
   type FragmentResponse,
 } from "@platform/mfe-contract";
+import { I18nProvider } from "./i18n";
 import { routes } from "./routes";
 
 /**
@@ -20,6 +21,7 @@ export async function serverEntry({
   url,
   headers = {},
   basePath,
+  context,
 }: FragmentRequest): Promise<FragmentResponse> {
   // Origin is irrelevant — only the path is used for matching. Headers are
   // forwarded so loaders can pass auth/cookies on to the API/BFF.
@@ -35,26 +37,28 @@ export async function serverEntry({
   const handler = createStaticHandler(routes, { basename: basePath });
   const request = new Request(target.href, { headers });
 
-  const context = await handler.query(request);
-  if (context instanceof Response) {
-    throw new Error(`MFE1 returned a ${context.status} instead of rendering`);
+  const routerContext = await handler.query(request);
+  if (routerContext instanceof Response) {
+    throw new Error(`MFE1 returned a ${routerContext.status} instead of rendering`);
   }
 
-  const router = createStaticRouter(handler.dataRoutes, context);
+  const router = createStaticRouter(handler.dataRoutes, routerContext);
 
   // hydrate={false} suppresses React Router's own
   // `window.__staticRouterHydrationData` script — the shell carries loader
   // data back to `clientEntry` as plain data instead, so nothing depends on
   // a document-level global.
   const html = renderToString(
-    <StaticRouterProvider router={router} context={context} hydrate={false} />,
+    <I18nProvider locale={context.locale}>
+      <StaticRouterProvider router={router} context={routerContext} hydrate={false} />
+    </I18nProvider>,
   );
 
   return {
     contractVersion: CONTRACT_VERSION,
     html,
-    status: context.statusCode,
-    data: context.loaderData,
+    status: routerContext.statusCode,
+    data: routerContext.loaderData,
     head: { title: "MFE1" },
   };
 }

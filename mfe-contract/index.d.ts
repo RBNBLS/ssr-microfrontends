@@ -4,10 +4,21 @@
 // Types only, apart from the version check: nothing here depends on a
 // package, so it can be installed anywhere.
 
-export declare const CONTRACT_VERSION: 1;
+export declare const CONTRACT_VERSION: 2;
 
 /** Whether a version an MFE reports can be used by this build. */
 export declare function isCompatible(version: unknown): boolean;
+
+/**
+ * What the shell has decided for this request and hands to every MFE, on both
+ * halves, so the server render and the browser render agree. MFEs never work
+ * these out themselves (from headers, cookies or storage).
+ */
+export interface MfeContext {
+  /** Selected by the shell (URL prefix, then cookie, then default). The MFE
+   *  owns its translations for it. */
+  locale: string;
+}
 
 // ── Server half: POST /__fragment ────────────────────────────────────────
 
@@ -19,6 +30,7 @@ export interface FragmentRequest {
   /** Where the shell mounts this MFE. The shell owns the URL space; the MFE
    *  owns everything below this path. */
   basePath: string;
+  context: MfeContext;
 }
 
 export interface FragmentResponse<Data = Record<string, unknown>> {
@@ -41,6 +53,8 @@ export interface ClientEntryInput<Data = Record<string, unknown>> {
   data?: Data;
   /** Must match the `basePath` the host sent to the fragment server. */
   basePath: string;
+  /** Must match the `context` the host sent to the fragment server. */
+  context: MfeContext;
   /**
    * Present when mounted inside a host. The host then owns `window.history`
    * outright: the MFE routes in memory and asks the host to change the URL.

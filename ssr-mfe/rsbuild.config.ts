@@ -9,6 +9,11 @@ import { pluginModuleFederation } from "@module-federation/rsbuild-plugin";
 const shared = {
   react: { singleton: true, requiredVersion: "^19.3.0" },
   "react-dom": { singleton: true, requiredVersion: "^19.3.0" },
+  // Its own entry: a subpath isn't covered by "react-dom". It holds React's
+  // renderer, so unshared the page ran two — and two renderers interleaving
+  // renders on the shared router contexts made MFE1's RouterProvider see the
+  // shell's router ("<Router> inside another <Router>").
+  "react-dom/client": { singleton: true, requiredVersion: "^19.3.0" },
   "react-router": { singleton: true, requiredVersion: "^8.4.0" },
 };
 

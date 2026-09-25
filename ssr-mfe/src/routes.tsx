@@ -6,6 +6,7 @@ import {
   useRouteError,
 } from 'react-router'
 import type { ReactNode } from 'react'
+import { useT } from './i18n'
 import type { RouteObject } from 'react-router'
 
 type RenderedOn = 'server' | 'browser'
@@ -18,7 +19,6 @@ const renderedOn = (): RenderedOn =>
   typeof document === 'undefined' ? 'server' : 'browser'
 
 export interface GreetingData {
-  message: string
   fetchedAt: string
   renderedOn: RenderedOn
 }
@@ -27,19 +27,19 @@ export interface GreetingData {
 // pattern an MFE loader is allowed (architecture doc, rule 2).
 async function fetchGreeting(): Promise<GreetingData> {
   return {
-    message: 'Hello from MFE1.',
     fetchedAt: new Date().toISOString(),
     renderedOn: renderedOn(),
   }
 }
 
 function Frame({ children }: { children: ReactNode }) {
+  const t = useT()
   return (
     <div style={{ border: '2px dashed #999', padding: 12, borderRadius: 8 }}>
-      <strong>MFE1</strong> (own router, basename passed by the shell)
+      <strong>MFE1</strong> {t.tagline}
       <nav style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
-        <Link to="/">Home</Link>
-        <Link to="/about">About</Link>
+        <Link to="/">{t.home}</Link>
+        <Link to="/about">{t.about}</Link>
       </nav>
       {children}
     </div>
@@ -59,12 +59,13 @@ function Layout() {
 // shell as `status` on the fragment.
 function ErrorBoundary() {
   const error = useRouteError()
+  const t = useT()
   return (
     <Frame>
       <p>
         {isRouteErrorResponse(error) && error.status === 404
-          ? 'Not found.'
-          : 'Something went wrong.'}
+          ? t.notFound
+          : t.error}
       </p>
     </Frame>
   )
@@ -72,11 +73,12 @@ function ErrorBoundary() {
 
 function Home() {
   const loaderData = useLoaderData() as GreetingData
+  const t = useT()
   return (
     <div>
-      <p>{loaderData.message}</p>
+      <p>{t.greeting}</p>
       <small>
-        rendered on: <strong>{loaderData.renderedOn}</strong> · fetched at{' '}
+        {t.renderedOn}: <strong>{loaderData.renderedOn}</strong> · {t.fetchedAt}{' '}
         {loaderData.fetchedAt}
       </small>
     </div>
@@ -85,11 +87,12 @@ function Home() {
 
 function About() {
   const { renderedOn } = useLoaderData() as { renderedOn: RenderedOn }
+  const t = useT()
   return (
     <div>
-      <p>MFE1 about route.</p>
+      <p>{t.aboutText}</p>
       <small>
-        rendered on: <strong>{renderedOn}</strong>
+        {t.renderedOn}: <strong>{renderedOn}</strong>
       </small>
     </div>
   )

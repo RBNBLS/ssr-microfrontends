@@ -1,10 +1,10 @@
 {
   "latestErrorEvent": {
     "code": "TYPE-001",
-    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"/Users/redabezzour/.nvm/versions/node/v24.21.0/bin/node /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/typescript/bin/tsc --project /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/.federation/tsconfig.a1c37054190701a283656ea6125eb31c.json\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
+    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"/Users/redabezzour/.nvm/versions/node/v24.21.0/bin/node /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/typescript/bin/tsc --project /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/.federation/tsconfig.d22b3f05941c9a06955c4f75de708728.json\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
     "args": {
-      "cmd": "/Users/redabezzour/.nvm/versions/node/v24.21.0/bin/node /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/typescript/bin/tsc --project /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/.federation/tsconfig.a1c37054190701a283656ea6125eb31c.json"
+      "cmd": "/Users/redabezzour/.nvm/versions/node/v24.21.0/bin/node /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/typescript/bin/tsc --project /Users/redabezzour/Desktop/tanstack-start/start-basic-rsbuild/ssr-mfe/node_modules/.federation/tsconfig.d22b3f05941c9a06955c4f75de708728.json"
     },
-    "timestamp": 1790171316901
+    "timestamp": 1790258364394
   }
 }

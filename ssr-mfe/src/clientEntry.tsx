@@ -10,6 +10,7 @@ import {
   type ClientEntryInput,
   type ClientEntryModule,
 } from "@platform/mfe-contract";
+import { I18nProvider } from "./i18n";
 import { routes } from "./routes";
 
 // Exposed as `./clientEntry`; hosts check this before calling `clientEntry`.
@@ -30,7 +31,7 @@ export function clientEntry(
   container: Element,
   input: ClientEntryInput,
 ): ClientEntryHandle {
-  const { basePath, host } = input;
+  const { basePath, host, context } = input;
   const hydrationData = input.data ? { loaderData: input.data } : undefined;
 
   // Router paths exclude the basename; the address bar includes it.
@@ -55,6 +56,10 @@ export function clientEntry(
     ? router.subscribe((state) => {
         // `subscribe` fires on every state change (loading, submitting…);
         // only a settled location change is a navigation worth reporting.
+        // While a loader runs, `state.location` is still the *previous* one:
+        // reporting it would send the host back there — after a back button
+        // to a route with a loader, an endless push loop.
+        if (state.navigation.state !== "idle") return;
         const href = state.location.pathname + state.location.search;
         if (href === hostHref) return;
         hostHref = href;
@@ -62,12 +67,19 @@ export function clientEntry(
       })
     : () => {};
 
-  const element = <RouterProvider router={router} />;
+  // Same locale the fragment server rendered with, so hydration matches.
+  const element = (
+    <I18nProvider locale={context.locale}>
+      <RouterProvider router={router} />
+    </I18nProvider>
+  );
   let root: ReturnType<typeof createRoot>;
 
   if (container.hasChildNodes()) {
+    console.log("loulz");
     root = hydrateRoot(container, element);
   } else {
+    console.log("lol");
     root = createRoot(container);
     root.render(element);
   }

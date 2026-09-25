@@ -5,7 +5,10 @@ import {
   Scripts,
   Link,
   useLoaderData,
+  useParams,
 } from "react-router";
+import { LocalePicker } from "./components/LocalePicker";
+import { DEFAULT_LOCALE, isLocale } from "./locale";
 import { buildMfeRegistry } from "./mfeConfig.server";
 import { registerMfeRemotes } from "./mfeRegistry";
 import { ErrorBoundary } from "react-error-boundary";
@@ -18,8 +21,10 @@ export function loader() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { locale: param } = useParams();
+  const locale = isLocale(param) ? param : DEFAULT_LOCALE;
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -28,8 +33,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <div style={{ display: "flex", gap: 12, padding: 8, fontSize: 18 }}>
-          <Link to="/">Home</Link>
-          <Link to="/mfe1">MFE1</Link>
+          <Link to={`/${locale}`}>Home</Link>
+          <Link to={`/${locale}/mfe1`}>MFE1</Link>
+          <LocalePicker locale={locale} />
         </div>
         <hr />
         {children}

@@ -1,13 +1,9 @@
-# MFE SSR — Architecture Decision Record & PoC Findings
+# MFE SSR — Architecture Decision Record
 
-**Date:** 2026-09-16
+**Date:** 2026-09-16 · **Updated:** 2026-09-25
 **Status:** Implemented and verified end-to-end in this repo — server render,
-SEO output, fail-soft, **and browser hydration**.
-**Supersedes:** `library-framework-decision.md`, `mfe-ssr-poc-synthesis.md`,
-`per-mfe-server-variant.md` (all consolidated here).
-**Amends:** the original `tanstack-start-mfe-ssr-architecture.md` — see
-*Divergence* (§5). That file is no longer present in this repo; §5 records what
-it specified and where the implementation departs from it.
+SEO output, fail-soft, browser hydration, locale.
+**Router:** React Router — framework mode for the shell, library mode for MFEs.
 
 ---
 
@@ -25,20 +21,20 @@ Browser
    ▼
 ┌─────────────────────────────┐        POST /__fragment
 │  Shell (React Router FW)    │ ──────────────────────────►  MFE1 fragment server
-│  • owns the document        │ ◄──────────────────────────  { html, status, data, head }
+│  • owns the document        │ ◄──────────────────────────  FragmentResponse
 │  • only SEO-bearing SSR     │        (own process)
-│  • splat route /mfe1/*      │
+│  • /:locale/mfe1/* splat    │
 └─────────────────────────────┘ ──────────────────────────►  MFE2, MFE3 …
    │
    │  browser: Module Federation (dependency sharing only)
    ▼
-MFE1 clientEntry ── hydrates its own subtree, owns routing under /mfe1/*
+MFE1 clientEntry ── hydrates its own subtree, owns routing under /:locale/mfe1/*
 ```
 
-**The contract, unchanged across every variant we tested:**
+**The contract** (`@platform/mfe-contract`, §3):
 
 ```
-{ url, headers, basePath }  →  { html, status, data, head }
+{ url, headers, basePath, context }  →  { contractVersion, html, status, data, head }
 ```
 
 ### What has been verified
@@ -46,19 +42,20 @@ MFE1 clientEntry ── hydrates its own subtree, owns routing under /mfe1/*
 | | |
 | --- | --- |
 | Crawler-visible SSR, index **and** deep links | ✅ raw HTML carries real content |
-| MFE `<title>` merged into the shell's `<head>` | ✅ |
-| Loader data resolved server-side | ✅ |
-| Browser hydration + `loadRemote` + MFE mount | ✅ |
-| Client-side navigation *inside* the MFE | ✅ no page reload |
-| Fail-soft: MFE down → degraded fragment, shell alive | ✅ 200, recovers unaided |
+| MFE `<title>` merged into the shell's `<head>`; MFE 404 becomes the document's 404 | ✅ |
+| Loader data resolved server-side, handed to the browser without refetching | ✅ |
+| Browser hydration + `loadRemote` + MFE mount, on one shared `react-dom` | ✅ |
+| Client-side navigation inside the MFE, back/forward included | ✅ no reload, no fragment refetch |
+| Locale in the URL: server render and hydration in the same language; switching refetches | ✅ |
+| Contract version mismatch on either half degrades instead of breaking | ✅ |
+| Fail-soft: MFE down → client rendering, shell alive, recovers unaided | ✅ |
 | Server bundle absent from the public client output | ✅ enforced at build |
 
 ---
 
 ## 2. Why this architecture
 
-This section is the point of the document. Each decision below was forced by
-something we hit, not chosen on preference.
+Each decision below was forced by a constraint, not chosen on preference.
 
 ### 2.1 Exactly one thing can own the document
 
@@ -66,108 +63,147 @@ An HTML document has one `<html>`, one `<head>`, one hydration lifecycle. That
 single fact drives everything else: the shell owns the document, and MFEs
 contribute **fragments** into it.
 
-### 2.2 Therefore an MFE cannot be a full SSR framework
+### 2.2 Therefore an MFE is not a document-owning framework
 
-A framework that owns the document assumes it is alone on the page. Concretely:
-
-- TanStack Start emits complete documents — `<!DOCTYPE html>` wrapping, plus
-  hydration scripts injected before `</body>`. There is no fragment contract, so
-  embedding one means scraping a document.
-- Frameworks hydrate through a single document-level global. Start's is `$_TSR`
-  — hardcoded, and deleted once hydration completes. Two such apps on one page
-  contend over it.
-
-**This holds whether or not the MFE has a server.** The collision is in the
-browser, and servers do not change the browser. It is the one constraint that
-survived every change of approach.
+A full SSR framework assumes it is alone on the page: it emits a complete
+document, and it hydrates through state it puts on the document. Two of them on
+one page contend for both. So an MFE doesn't bring a framework; it brings a
+**fragment** and a function to hydrate it. This applies to React Router's own
+framework mode too — hence the split in §2.3.
 
 ### 2.3 Therefore MFEs use React Router in *library* mode
 
-We tested the alternative. TanStack Router without Start produced `matches: []`
-and an **empty HTML string**: its SSR path needs a bootstrap sequence
-(`attachRouterServerSsrUtils` → `load()` → `serverSsr.dehydrate()`) whose methods
-are annotated `/** Framework-only. */` in the library's own source. Finishing
-that by hand means privately reimplementing Start's server handler against
-internals with no stability guarantee — and it drags `$_TSR` back in.
+`createStaticHandler` / `createStaticRouter` / `StaticRouterProvider` exist to
+be driven by an arbitrary host: match a URL, run loaders, render to a string.
+With `hydrate={false}`, React Router emits no hydration script and no
+document-level global; the loader data travels back to the browser as a plain
+value in the fragment response, and `clientEntry` receives it as an argument:
 
-React Router's `createStaticHandler` / `createStaticRouter` /
-`StaticRouterProvider` exist precisely to be driven by an arbitrary host. With
-`hydrate={false}`, hydration data is passed explicitly as plain values and no
-document-level global is involved.
+```ts
+clientEntry(container, { data, basePath, context, host })
+```
 
-**Why library mode and not React Router framework mode for MFEs:** framework
-mode is also a document-owning framework, so §2.2 applies to it equally.
+No shared name, nothing to collide — any number of MFEs can coexist on a page.
 
-### 2.4 Therefore MFEs own their servers
+### 2.4 Therefore MFEs own their servers, reached over HTTP
 
-Originally the shell loaded MFE code into its own process via server-side
-Module Federation. It worked, but every hard failure in the PoC traced to that
-one design choice:
-
-| Failure | Root cause |
-| --- | --- |
-| Every shell route 500'd with `__webpack_modules__[moduleId] is not a function` | The MF plugin rewrites the host environment to `chunkLoading: 'async-node'`, breaking the shell framework's own chunk loading |
-| Shell **process died** when an MFE was unreachable | MF's `SnapshotHandler` rejects an internal floating promise; Node terminates on unhandled rejection. A process-level guard was added at the time and later **removed** — with MFEs behind HTTP a failed `fetch` is an ordinary rejected promise, caught at the call site |
-| MFE edits required restarting the shell | Remote containers are cached in-process |
-| Cross-request state, shared globals, shared memory, shared crash blast radius | Another team's code executing in your process |
-| `--experimental-vm-modules`, a static server for the node build, `assetPrefix` juggling, a separate federation compilation | Consequences of loading remote code into the server |
-
-All of it is one problem wearing different hats: **executing another team's code
-inside your server process.** Moving MFEs behind HTTP removes the entire class.
-A failed fetch is an ordinary rejected promise.
+The shell never loads an MFE's code into its own process. Each MFE runs a
+fragment server; the shell calls it with `fetch`. That makes an MFE failure an
+ordinary rejected promise, caught at the call site — never a crash, a leaked
+global or cross-request state in the shell. It also means MFE deploys never
+restart the shell.
 
 The cost is real — N services to operate, a network hop inside SSR — and that is
-the trade this architecture accepts deliberately.
+the trade this architecture accepts deliberately (§5).
 
 ### 2.5 "Owns a server" does not mean "needs a framework"
 
-The MFE's server has one job: accept a request, return `{ html, status, data, head }`.
-The function already existed, so the server is a thin wrapper around it — Node's
-built-in `http`, no framework, no new dependency. The MFE got *simpler* when it
-gained a server.
-
-This also removes the "you'd have to scrape HTML out of a document" objection:
-the fragment endpoint is designed on purpose rather than parsed after the fact.
+The MFE's server has one job: accept a `FragmentRequest`, return a
+`FragmentResponse`. It is a thin wrapper around `serverEntry` on Node's built-in
+`http` — no framework, no application server, no server routes. The fragment
+endpoint is designed on purpose, not scraped out of a document.
 
 ### 2.6 Module Federation is kept — but only in the browser
 
-Server-side federation is what caused the damage above. Client-side federation
-is well-supported and earns its place: it keeps `react`, `react-dom` and
-`react-router` as shared singletons, so the page carries one copy of each rather
-than one per MFE.
+Federation is used for one thing: loading each MFE's browser bundle at runtime
+and sharing dependencies with it. `react`, `react-dom`, **`react-dom/client`**
+and `react-router` are singletons, so the page carries one copy of each.
 
-### 2.7 The shell is React Router framework mode
+`react-dom/client` has to be listed on its own — a subpath isn't covered by its
+package's shared entry — and it matters most: it holds React's renderer. With
+two renderers on one page, their concurrent renders interleave over the shared
+router contexts, and an MFE's `RouterProvider` intermittently sees the shell's
+router ("You cannot render a `<Router>` inside another `<Router>`").
+
+Remotes are registered at runtime from a registry the shell's root loader
+serialises into the document, never declared at build time — a build-time
+`remotes` bakes URLs into the bundle.
+
+### 2.7 The shell is React Router framework mode on rsbuild
 
 With MFEs on React Router library mode, a React Router shell makes
-`react-router` a genuine singleton across shell and MFEs. TanStack Start would
-mean shipping two router libraries with no way to dedupe them.
+`react-router` a single shared instance across shell and MFEs, and gives the
+shell the same routing model its MFEs use.
 
-**On the bundler.** The shell runs on rsbuild because *server-side* Module
-Federation only works properly on rspack. That original constraint is gone — we
-removed server-side federation in §2.4 — so moving to React Router's first-party
-Vite plugin, and off a pre-1.0 community plugin, is worth periodically
-re-examining. It is a bigger move than it first appears.
-
-Reading the plugin's source, `pluginReactRouter({ federation: true })` performs
-three fixes, all in rspack's own model:
+**On the bundler.** The shell runs on rsbuild with `rsbuild-plugin-react-router`
+(pre-1.0, community). `pluginReactRouter({ federation: true })` is not an output
+switch — it performs three fixes in rspack's model that browser federation
+needs:
 
 | `src/federation.ts` | What it prevents |
 | --- | --- |
 | `isolateFederationContainerRuntime` | Gives the MF container its own runtime chunk. Sharing one means the app entry's share-scope consumes run before the host initialises the scope — **a second React**. |
-| `ensureFederationAsyncStartup` | Force-sets `asyncStartup` on the MF plugin, the async boundary shared consumption needs (see §8). |
+| `ensureFederationAsyncStartup` | Force-sets `asyncStartup` on the MF plugin, the async boundary shared consumption needs (§7). |
 | `enforceAsyncOnlyServerSplitChunks` | Pins `splitChunks.chunks = 'async'` so initial chunks cannot break rspack's startup gate `__webpack_require__.O`. |
 
-`runtimeChunk`, `splitChunks` and `__webpack_require__.O` are webpack-lineage
-concepts with no Vite counterpart, so this is not code to port — the failure
-modes differ. On Vite the browser half would run on `@module-federation/vite`,
-the package rejected in §4 path 6, scoped to the client environment only. That
-scoping is plausible under Vite's environment API but **untested here**.
+`runtimeChunk`, `splitChunks` and `__webpack_require__.O` have no Vite
+counterpart, so a move to React Router's first-party Vite plugin would not port
+these fixes — it would trade them for `@module-federation/vite`'s, which are
+untested here. Stay on rsbuild until the plugin causes a concrete problem; if
+it does, spike the Vite shell in a throwaway directory first.
 
-Worth weighing: "official plugin" buys React Router stability at the cost of
-Module Federation stability, and every hard problem in this project has come
-from the federation side. Recommendation: stay on rsbuild until the plugin's
-pre-1.0 status causes a concrete problem; if it does, spike the Vite shell in a
-throwaway directory before committing.
+### 2.8 The locale is in the URL
+
+Every page lives under its locale: `/en/mfe1/about`, `/fr/mfe1/about`. The
+shell reads it from the path and hands it to MFEs as `context.locale` on both
+halves of the contract; MFEs own their translations.
+
+**Why the URL, and not somewhere else.** This project server-renders for SEO,
+and the locale has to satisfy the same two readers everything else does:
+
+1. **The server render and the browser must agree.** The fragment server renders
+   in some language; the browser then hydrates that markup and must render the
+   same language, or hydration mismatches. So the value has to be known to the
+   server on the very first request, and be identical in the browser.
+2. **A crawler must be able to reach every language.** Each language version
+   needs an address a crawler can request and index on its own.
+
+Only a path segment satisfies both. The alternatives, and why they lose:
+
+| Where the locale lives | Server knows it | Crawlers see each language | Verdict |
+| --- | --- | --- | --- |
+| **Path: `/fr/...`** | ✅ in the URL | ✅ one URL per language | **Chosen** |
+| Query: `?lang=fr` | ✅ | ⚠️ | Google: "URL parameters … Not recommended" |
+| Cookie only, same URL | ✅ | ❌ one URL, content varies | Google: "might not find and crawl all your variations" |
+| `localStorage` + a JS event | ❌ browser-only | ❌ | Server renders the default, browser renders the choice: a hydration mismatch on every page load for non-default users |
+| `Accept-Language` read by each MFE | ✅ | ❌ | Each MFE decides for itself; they can disagree, and the user's explicit choice is ignored |
+
+The Google guidance is *Managing multi-regional and multilingual sites*
+(Search Central), which recommends country domains, subdomains or
+**subdirectories** (`example.com/de/`, "easy to set up with low maintenance")
+and explicitly not URL parameters or content that changes by cookie or browser
+setting. Subdirectories are the cheapest of the three and the only one needing
+no DNS or hosting changes.
+
+**Why the shell selects it, not the MFE.** One decision, made once per request,
+passed explicitly: MFEs never read the locale from headers, cookies or storage.
+That keeps every MFE on the page, and both halves of each MFE, on the same
+language, and makes it part of the typed, versioned contract (`MfeContext`)
+rather than an implicit convention.
+
+**What the cookie is for.** Only remembering the choice: a bare `/` has no
+locale in it, so it redirects to the one the picker last set, else `en`. The
+cookie never overrides a locale that is in the URL.
+
+**Consequences, accepted:**
+
+- Switching language is a plain navigation (`/en/...` → `/fr/...`), not an
+  event anyone subscribes to. The MFE route's `shouldRevalidate` refetches the
+  fragment only when the locale segment changes; MFE-internal navigation is
+  untouched.
+- Every shell route sits under `/:locale`; an unknown prefix (`/zz`) is a 404.
+  URLs without a locale (the old `/mfe1`) no longer exist — add redirects if
+  they were ever published.
+- Language switches are shareable and bookmarkable, and back/forward crosses
+  them like any navigation.
+
+**Not done yet:** `hreflang` alternate links in `<head>`, which Google pairs
+with per-language URLs so it knows the pages are translations of each other.
+
+**Where this would differ:** pages behind a login have no crawler to serve.
+There, a user-profile setting remembered in a cookie is the usual choice and
+the URL prefix is optional — the contract doesn't change, only where the shell
+reads the locale from.
 
 ---
 
@@ -179,13 +215,14 @@ throwaway directory before committing.
 | --- | --- | --- |
 | `ssr-shell-rt` | Shell. React Router framework mode on rsbuild. Owns the document and URL space. | 3000 |
 | `ssr-mfe` | MFE1. React Router library mode + fragment server. | 3001 browser bundle, 3002 fragment server |
+| `mfe-contract` | `@platform/mfe-contract` — the shell ↔ MFE contract, installed in both. | — |
 
 ### MFE endpoints
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /__fragment` | The contract. `{url, headers, basePath}` → `{html, status, data, head}` |
-| `GET /preview/*` | SSR + hydrate preview — the shell's render path without the shell: server markup plus loader data, hydrated by the :3001 bundle |
+| `POST /__fragment` | The contract. `FragmentRequest` → `FragmentResponse` |
+| `GET /preview/*` | SSR + hydrate preview — the shell's render path without the shell: server markup plus loader data, hydrated by the :3001 bundle (`?locale=` stands in for the shell's choice) |
 | `GET /health` | Liveness |
 
 ### How each half of the contract is typed
@@ -193,7 +230,8 @@ throwaway directory before committing.
 Both halves come from one package, `@platform/mfe-contract` (`mfe-contract/`
 in this repo, a `file:` dependency standing in for a registry package). The
 contract is the platform's, not MFE1's: every MFE implements the same shape,
-and only `data` varies, hence a type parameter.
+and only `data` varies, hence a type parameter. `MfeContext` is the one
+versioned slot for what the shell decides per request — `locale` today.
 
 - **Compile time.** The MFE implements the types (`satisfies ClientEntryModule`),
   the shell imports them. A change one side doesn't expect fails that side's
@@ -207,7 +245,7 @@ and only `data` varies, hence a type parameter.
   Verified in a browser by bumping each side's version in turn.
 
 Why not MF's generated types: its DTS plugin needs either a build-time
-`remotes` declaration, which bakes the URL in (§2.7), or its dev-only runtime
+`remotes` declaration, which bakes the URL in (§2.6), or its dev-only runtime
 hook (`dynamic-remote-type-hints-plugin`), which fetches types only after a
 browser registers the remote — never in CI. And it could only ever cover the
 browser half: `/__fragment` is JSON, not a module.
@@ -221,30 +259,53 @@ sequenceDiagram
     participant M as MFE1 Fragment Server
     participant A as API / BFF
 
-    B->>S: GET /mfe1/orders
-    S->>S: match /mfe1/* splat route
-    S->>M: POST /__fragment { url, headers, basePath }
+    B->>S: GET /en/mfe1/orders
+    S->>S: match /:locale/mfe1/* splat route
+    S->>M: POST /__fragment { url, headers, basePath, context }
     M->>M: createStaticHandler().query(request)
     M->>A: fetch orders (forwarded headers)
     A-->>M: data
     M->>M: renderToString
-    M-->>S: { html, status, data, head }
-    S->>S: merge head, embed html,<br/>keep html out of hydration payload
+    M-->>S: { contractVersion, html, status, data, head }
+    S->>S: check version, merge head, embed html,<br/>keep html out of hydration payload
     S-->>B: HTML document (shell + MFE fragment)
 
     B->>B: hydrate shell
     B->>M: GET clientEntry bundle (Module Federation)
     M-->>B: JS
-    B->>B: clientEntry(container, { data, basePath })
-    Note over B: MFE hydrates its own subtree,<br/>then owns routing under /mfe1/*
+    B->>B: clientEntry(container, { data, basePath, context, host })
+    Note over B: MFE hydrates its own subtree,<br/>then owns routing under /:locale/mfe1/*
 ```
+
+### Browser integration
+
+How the shell's route (`app/routes/mfe1.tsx`) and `clientEntry` meet:
+
+- **One writer of `window.history`.** Hosted, the MFE routes in a memory router;
+  navigation crosses as plain calls — `host.onNavigate` up, `handle.navigate`
+  down. The MFE reports only *settled* navigations: while a loader runs, its
+  router still holds the previous location.
+- **The shell's loader doesn't re-run for MFE navigation.** `shouldRevalidate`
+  is false unless the locale changes. Loaders forward React Router's
+  normalized `url`, never `request.url`, which carries `.data` on client
+  navigations.
+- **MFE markup is not React's territory.** The shell renders `#mfe1-root` with
+  `dangerouslySetInnerHTML` and `suppressHydrationWarning`; the fragment sits in
+  an inner `<div data-mfe-ssr>`, and that is what the MFE hydrates — React
+  forbids a root on an element it renders with `dangerouslySetInnerHTML`.
+- **MFE roots unmount a tick late.** Route cleanup runs during the shell's
+  render, and React can't unmount another root then. Each client mount gets a
+  fresh inner element, so a remount never reuses one still being torn down.
+- **HTML never enters loader data.** The framework serialises loader data into
+  the page; the fragment would ship twice. A token goes through
+  `app/mfeHtmlStore.ts` and the markup is read server-side only.
 
 ### Ownership boundary
 
-- **Shell owns** the document, the URL space, which path each MFE occupies, and
-  `<head>` composition.
+- **Shell owns** the document, the URL space (including the locale), which path
+  each MFE occupies, and `<head>` composition.
 - **MFE owns** everything beneath its mount path: routes, navigation, data
-  fetching, and its own rendering.
+  fetching, translations and its own rendering.
 
 `basePath` is passed in rather than hardcoded, so an MFE can be relocated or
 mounted more than once without an MFE release.
@@ -254,101 +315,66 @@ mounted more than once without an MFE release.
 The shell treats an MFE as a fragment, never as the page:
 
 - Per-MFE timeout via `AbortSignal.timeout` — genuinely cancels the request.
-- Any failure or non-2xx degrades that fragment to client-side rendering; the
-  page still renders.
-- No process-level guard. One was needed while MFE code ran in the shell's
-  process (§2.4) and was removed with it: behind HTTP, a failed fetch is an
-  ordinary rejected promise caught at its call site.
+- Any failure, non-2xx or contract mismatch degrades that fragment to
+  client-side rendering; the page still renders.
+- An MFE's own 404 is a successful render: it comes back as `status` in the
+  fragment and becomes the document's status. Only page mounts adopt it; a
+  widget mount must not.
+- No process-level guard: behind HTTP, a failed fetch is an ordinary rejected
+  promise caught at its call site.
 
-**Verified:** with the MFE server down, `/mfe1` returns 200 with a degraded
-fragment, the shell stays alive across repeated requests, and it recovers
-automatically when the MFE returns — no restart.
-
----
-
-## 4. How we got here — paths tested
-
-| # | Path | Result | Evidence |
-| --- | --- | --- | --- |
-| 1 | MF attached to the shell framework's own SSR environment | ❌ | Every route 500s inside the framework's own `loadEntries()` |
-| 2 | MF in a separate compilation, loaded via runtime `require` | ✅ worked | Needed 6 permanent workarounds |
-| 3 | MFE on TanStack Router, no Start | ❌ | `matches: []`, empty HTML |
-| 4 | MFE on React Router library mode | ✅ | Full SSR + loader data; **zero shell changes required** |
-| 5 | MFE on TanStack Start | ⛔ reasoned | §2.2 — owns the document |
-| 6 | Vite instead of rsbuild | ⛔ researched | `@module-federation/vite` is CSR-oriented with documented SSR incompatibilities |
-| 7 | Shell on React Router framework mode | ✅ | MF attaches directly to its `node` env; no separate compilation |
-| 8 | **MFEs own their servers** | ✅ **adopted** | Eliminated every failure in §2.4 |
-
-Notable negative result: `experiments.asyncStartup: true` did **not** fix path 1,
-with or without eager sharing — it addresses share-scope timing, not chunk
-loading. Recorded so nobody repeats it.
-
-Path 4 proved the contract is router-agnostic: swapping the MFE's router
-required no shell change at all. That property is what later made the transport
-swap in path 8 cheap.
+**Verified:** with the MFE server down, the page returns 200 with the MFE
+rendered client-side, the shell stays alive across repeated requests, and it
+recovers automatically when the MFE returns — no restart.
 
 ---
 
-## 5. Divergence from the original architecture doc
+## 4. Rules for MFEs
 
-`tanstack-start-mfe-ssr-architecture.md` should be amended. Four of its
-statements no longer hold:
-
-| Original | Now |
-| --- | --- |
-| "One SSR server" | Shell + one server per SSR-capable MFE |
-| "No route-level reverse proxy between applications" | The shell fetches fragments over HTTP |
-| **Rule 1:** no MFE-owned server | **Dropped.** MFEs own a fragment server — but still no MFE-owned *application* server, no `createServerFn`, no MFE-owned API routes |
-| "Runtime Module Federation remains the MFE integration mechanism" | Browser only. Server integration is HTTP |
-
-What survives unchanged: MFEs contain universal React; they reach backends only
-through APIs/BFFs; code must be SSR-safe; React/React-DOM/router are shared
-singletons in the browser; and the federation contract stays explicit — one shared, versioned contract
-package for both halves (§3).
-
-**One rule to add:** MFE server code must hold no mutable module-scope state.
-The fragment server handles many requests in one process, so module-level
-mutable state leaks across users.
+- MFEs contain universal React: code must be SSR-safe.
+- MFEs reach backends only through APIs/BFFs — no MFE-owned application server,
+  no server routes, no MFE-owned API routes. The fragment server is the only
+  server an MFE runs.
+- `react`, `react-dom`, `react-dom/client` and `react-router` are shared
+  singletons in the browser.
+- The contract is explicit: implement `@platform/mfe-contract`, report
+  `CONTRACT_VERSION`, take the locale from `context`.
+- **No mutable module-scope state in server code.** The fragment server handles
+  many requests in one process, so module-level mutable state leaks across
+  users.
 
 ---
 
-## 6. Accepted trade-offs
+## 5. Accepted trade-offs
 
 - **Operational cost.** N services to deploy, monitor, scale and secure. This is
   the price of the isolation in §2.4.
 - **Latency inside SSR.** Each fragment is a network round trip. Mitigated by
   per-MFE timeouts; parallelise when a page carries several MFEs.
-- **Two router libraries would ship** if the shell ever moves to TanStack Start.
-  Current choice avoids this.
+- **A wasted render on client navigation into an MFE.** The shell's loader
+  fetches the full fragment, but only its `data` reaches the browser; the HTML
+  is discarded. A data-only fragment mode would remove it if it ever matters.
 - **Server-side dependency sharing does not exist** and is not needed — the
   server boundary is a serialized string, so instance identity never matters.
 
 ---
 
-## 7. Known gaps
+## 6. Known gaps
 
-1. ~~Browser hydration is unverified.~~ **Closed.** Verified in a browser: the
-   shell hydrates, `loadRemote` resolves, `clientEntry` hydrates the subtree
-   without wiping the server markup, and navigation *inside* the MFE is
-   client-side. The only hydration warning observed came from a browser
-   extension (`cz-shortcut-listen` on `<body>`, ColorZilla), not the app.
-2. **Version skew between server and browser.** Shell ↔ MFE skew is handled by
-   the contract version check (§3). Still open: a deploy can leave one MFE's
-   fragment server on one release while browsers load its previous client
-   bundle — same contract major, different markup. Needs a deliberate strategy.
-3. **Request context is minimal.** Only `headers` crosses today. Locale, user,
-   tenant and feature flags will need an explicit, versioned slot — keep it
-   small or it becomes a dumping ground.
-4. **`validate:mfe` is unbuilt.** Should cover: no mutable module-scope state
+1. **Version skew within one MFE.** Shell ↔ MFE skew is handled by the contract
+   version check (§3). Still open: a deploy can leave one MFE's fragment server
+   on one release while browsers load its previous client bundle — same
+   contract major, different markup. Needs a deliberate strategy.
+2. **`validate:mfe` is unbuilt.** Should cover: no mutable module-scope state
    (a concurrency smoke test catches the realistic cases), no global mutation,
    SSR safety, and pinned versions.
-5. **The shell's bundler.** Staying on rsbuild is a deliberate choice, not an
-   inherited constraint — §2.7 sets out what a move to Vite would actually
-   involve and what remains untested.
+3. **`hreflang` links** for the per-language URLs (§2.8).
+4. **The shell's bundler.** Staying on rsbuild is a deliberate choice — §2.7
+   sets out what a move to Vite would involve and what remains untested.
 
 ---
 
-## 8. Operating notes
+## 7. Operating notes
 
 Node ≥ 22.22 (React Router 8); both projects pin 24.21.0 via `.nvmrc`.
 
@@ -357,143 +383,31 @@ cd ssr-mfe      && nvm use && npm run dev   # 3001 browser, 3002 fragment server
 cd ssr-shell-rt && nvm use && npm run dev   # 3000
 ```
 
-Gotchas discovered, all recorded in the project READMEs:
+The landmines — each with its symptom and fix — live in `CLAUDE.md`. The
+configuration they produced:
 
-- `NODE_OPTIONS=--experimental-vm-modules` is required by **rsbuild's dev
-  runner** for ESM server bundles — not, as first assumed, by Module Federation.
-- **`experiments: { asyncStartup: true }` belongs on the *Module Federation
-  plugin*, not on rsbuild's top-level `experiments`.** It is what wraps the entry
-  in the async boundary shared consumption needs. `root.tsx` imports
-  `react-router` at module scope, so without it the browser dies at startup with
-  `RUNTIME-006: Invalid loadShareSync`. The symptom gives no hint which config
-  object the option belongs on — it cost three wrong diagnoses (blaming
-  `federation: false`, then `eager: true`, then reverting both).
-- **`pluginReactRouter({ federation: true })` is startup wiring, not a
-  build-output switch.** Turning it off to stop the server-bundle copy (below)
-  breaks Module Federation before the app boots. Leave it on.
-- **`federation: true` copies the whole server build into `build/client/static`**
-  (`copySync(build/server, build/client/static)`, guarded on
-  `pluginOptions.federation && ssr`). Served as a static origin, that publishes
-  the shell's server bundle — verified byte-identical to `build/server/index.js`
-  and fetchable over HTTP. `scripts/strip-server-copy.mjs` removes it after every
+- `experiments: { asyncStartup: true }` on the **Module Federation plugin** in
+  both projects, not on rsbuild's top-level `experiments`. Without it the
+  browser dies at startup with `RUNTIME-006: Invalid loadShareSync`.
+- `pluginReactRouter({ federation: true })` stays on (§2.7).
+- `federation: true` also copies the whole server build into
+  `build/client/static`; `scripts/strip-server-copy.mjs` removes it after every
   build and fails if any file in `build/client` still hashes to the server
-  bundle. Keep that check through plugin upgrades.
-- **DTS type generation is off.** If re-enabled, `consumeTypes.abortOnError`
-  must be `false`: the DTS watcher fetches remote manifests in the build tooling
-  process, and on the default it takes the whole dev server down whenever an MFE
-  is unreachable — a normal local state now that MFEs are separate services.
+  bundle.
+- `NODE_OPTIONS=--experimental-vm-modules` is required by **rsbuild's dev
+  runner** for ESM server bundles, not by Module Federation.
 - The browser remote is loaded with `loadRemote('mfe1/clientEntry')` from
-  `@module-federation/enhanced/runtime`, not a bare `import()`. The specifier is
-  then a runtime string, so the server compilation has nothing to resolve. A
-  static import instead requires marking it external on the node build, because
-  the route component ships to both environments even though the call sits in a
-  `useEffect` that never runs server-side.
-- `@mf-types` must be in `tsconfig.json`'s `include` — that is what makes
-  TypeScript pick up MF's module augmentation for `loadRemote`. It is generated,
-  so it is also in `.gitignore`.
-- `@react-router/dev`'s typegen imports Vite, so `vite` is a required
-  devDependency even under rsbuild.
-- React Router 8 renamed the `meta` argument from `data` to `loaderData` — found
-  at runtime, as a silently missing `<title>`. Route modules now take their arg
-  types from the plugin's generated `./+types/<route>` (`Route.LoaderArgs`,
-  `Route.MetaArgs`), reachable via `rootDirs` in `tsconfig.json`, so the next
-  such rename fails typecheck instead.
-- MFE rendered HTML is passed to the component through a short-lived token
-  store, never through loader data — otherwise the framework serializes the
-  whole fragment into the page a second time.
+  `@module-federation/enhanced/runtime`, not a bare `import()`: the specifier
+  is a runtime string, so the server compilation has nothing to resolve.
+- Route modules take their arg types from the generated `./+types/<route>`;
+  `@react-router/dev`'s typegen imports Vite, so `vite` is a devDependency even
+  under rsbuild.
 
 ---
 
-## 9. References
+## 8. References
 
-**Build tooling**
-- [`rsbuild-plugin-react-router`](https://github.com/rstackjs/rsbuild-plugin-react-router) — 0.7.1, MIT, community-maintained
-- [Module Federation in that plugin](https://deepwiki.com/rspack-contrib/rsbuild-plugin-react-router/5.4-module-federation)
-- [`@module-federation/rsbuild-plugin`](https://www.npmjs.com/package/@module-federation/rsbuild-plugin)
-- [MF Rsbuild guide](https://module-federation.io/guide/build-plugins/plugins-rsbuild)
-- [MF on Node.js](https://module-federation.io/blog/node)
-
-**Rejected paths**
-- [React Router discussion #13444 — MF with Vite](https://github.com/remix-run/react-router/discussions/13444)
-- [Modern.js — first-class MF + SSR](https://modernjs.dev/guides/topic-detail/module-federation/ssr) — the only stack where neither half is glue; not evaluated, would be a larger framework commitment
-
-**Repo**
-- `ssr-shell-rt/` — the shell
-- `ssr-mfe/` — MFE1, including its fragment server
-
-An earlier `ssr-shell/` (TanStack Start with in-process federation) was the
-subject of paths 1–2 in §4. It is no longer in the repo; §2.4 records what it
-cost and why it was abandoned.
-
----
-
-## 10. Appendix — why "Start shell + TanStack Router MFE" fails
-
-This pairing looks like the obvious middle ground: keep TanStack Start where it
-works (the shell) and drop to plain TanStack Router where a framework cannot go
-(the MFE). It does not work, and it fails twice.
-
-### Blocker 1 — TanStack Router cannot server-render on its own
-
-Tested directly:
-
-```ts
-const router = createRouter({ routeTree, basepath: '/mfe1', history })
-await router.load()
-renderToString(<RouterProvider router={router} />)   // → matches: [], empty string
-```
-
-SSR needs a bootstrap sequence — `attachRouterServerSsrUtils` → `load()` →
-`serverSsr.dehydrate()` — and those methods are annotated `/** Framework-only. */`
-in the library's own source. They exist to be driven by TanStack Start, not by
-an arbitrary host. Client-side routing works standalone; server rendering does
-not.
-
-### Blocker 2 — the `$_TSR` collision, waiting behind it
-
-Suppose you hand-wire the bootstrap to get real markup. That is exactly what
-sets up the buffer emitting TanStack's hydration scripts, and those use a single
-hardcoded global:
-
-```
-@tanstack/router-core/.../ssr/constants.js   const GLOBAL_TSR = "$_TSR"
-@tanstack/router-core/.../load-client.js     hydrate() reads window.$_TSR
-```
-
-Note the package: **this lives in Router, not in Start.** Start merely drives
-it. The server writes the page's hydration data there, the client reads it, then
-deletes it (`delete self.$_TSR`).
-
-Two TanStack apps on one document therefore share one mailbox that each empties
-after reading. They overwrite each other's data, and whichever hydrates first
-deletes it before the other can read. The name is a constant with no
-per-app namespace, so it cannot be configured away — the design assumes exactly
-one TanStack app owns the document, which is the opposite of a micro-frontend
-page.
-
-### Why the two blockers are layered, not alternatives
-
-Solving the first *creates* the second: you cannot get markup without attaching
-the SSR utils, and attaching them is what produces the `$_TSR` scripts.
-
-Escaping both would mean attaching the utils for the render, discarding the
-buffered scripts, and passing loader data through your own channel — in effect
-maintaining a private reimplementation of Start's server handler against methods
-the library labels framework-only, with no stability guarantee.
-
-### Why React Router library mode avoids this entirely
-
-It never uses a global for hydration. Data is handed over as a plain argument:
-
-```ts
-clientEntry(container, { data, basePath })
-```
-
-No shared name, no deletion, no contention — any number of MFEs can coexist on
-one page.
-
-### The one case where the pairing would be fine
-
-If MFEs were **CSR-only**, TanStack Router would be a perfectly good choice —
-neither blocker involves client-side routing. Both appear solely because SSR is
-required for SEO.
+- [`rsbuild-plugin-react-router`](https://github.com/rstackjs/rsbuild-plugin-react-router) — community-maintained
+- [`@module-federation/rsbuild-plugin`](https://www.npmjs.com/package/@module-federation/rsbuild-plugin) · [MF Rsbuild guide](https://module-federation.io/guide/build-plugins/plugins-rsbuild)
+- [Google Search Central — Managing multi-regional and multilingual sites](https://developers.google.com/search/docs/specialty/international/managing-multi-regional-sites)
+- Repo: `ssr-shell-rt/` (shell), `ssr-mfe/` (MFE1 + fragment server), `mfe-contract/` (contract)

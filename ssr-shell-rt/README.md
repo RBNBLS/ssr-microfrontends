@@ -25,7 +25,7 @@ cd ssr-shell-rt && nvm use && npm install && npm run dev
 #   :3000  the shell
 ```
 
-Then open http://localhost:3000/mfe1
+Then open http://localhost:3000/en/mfe1
 
 `npm run dev` already sets `NODE_OPTIONS=--experimental-vm-modules`, which
 `@module-federation/node` needs to evaluate fetched remote entries via `vm`.

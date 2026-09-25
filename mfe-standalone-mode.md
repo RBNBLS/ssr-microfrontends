@@ -17,7 +17,7 @@ hydrates, the same path the shell takes. Both mount through the same
 | --- | --- | --- | --- | --- |
 | `:3001/*` | No — empty `#root` | No — `createRoot` | browser | `''` |
 | `:3002/preview/*` | Yes — `serverEntry` | Yes — `hydrateRoot` | browser | `/preview` |
-| Shell `:3000/mfe1/*` | Yes — `serverEntry` via `/__fragment` | Yes — `hydrateRoot` | memory (`host` set) | `/mfe1` |
+| Shell `:3000/:locale/mfe1/*` | Yes — `serverEntry` via `/__fragment` | Yes — `hydrateRoot` | memory (`host` set) | `/en/mfe1`, `/fr/mfe1` |
 
 ---
 
@@ -116,3 +116,6 @@ Only the shell exercises these:
 
 If :3001 is not running, `/preview` still renders the server markup, with a
 note that hydration is off.
+
+Both pages stand in for the shell's locale choice with `?locale=` (default
+`en`): `:3001/about?locale=fr`, `:3002/preview/about?locale=fr`.

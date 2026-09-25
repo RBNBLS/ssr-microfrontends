@@ -2,8 +2,12 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
 import { MFE1_SEGMENT } from "./mfeConfig";
 
 export default [
-  index("routes/home.tsx"),
-  // Splat: everything under the MFE's mount path is delegated to its own router.
-  route(`${MFE1_SEGMENT}/*`, "routes/mfe1.tsx"),
+  index("routes/locale-redirect.tsx"),
+  // Every page sits under its locale (/en/..., /fr/...) — see app/locale.ts.
+  route(":locale", "routes/locale.tsx", [
+    index("routes/home.tsx"),
+    // Splat: everything under the MFE's mount path is delegated to its own router.
+    route(`${MFE1_SEGMENT}/*`, "routes/mfe1.tsx"),
+  ]),
   route("*", "routes/not-found.tsx"),
 ] satisfies RouteConfig;

@@ -7,6 +7,9 @@ import { pluginModuleFederation } from "@module-federation/rsbuild-plugin";
 const shared = {
   react: { singleton: true, requiredVersion: "^19.2.3" },
   "react-dom": { singleton: true, requiredVersion: "^19.2.3" },
+  // Not covered by "react-dom"; it's the renderer MFEs mount with. See the
+  // note in ssr-mfe/rsbuild.config.ts.
+  "react-dom/client": { singleton: true, requiredVersion: "^19.2.3" },
   "react-router": { singleton: true, requiredVersion: "^8.4.0" },
 };
 

@@ -7,6 +7,8 @@
 //   :3002/preview  — server-rendered by the fragment server, which leaves its
 //                    loader data in #mfe-preview; `clientEntry` then hydrates,
 //                    as it does under the shell.
+//
+// Standing in for the shell, both take the locale from `?locale=` (default en).
 import { clientEntry } from './clientEntry'
 
 const rootEl = document.getElementById('root')
@@ -14,6 +16,13 @@ const preview = document.getElementById('mfe-preview')
 if (rootEl) {
   clientEntry(
     rootEl,
-    preview ? JSON.parse(preview.textContent ?? '') : { basePath: '' },
+    preview
+      ? JSON.parse(preview.textContent ?? '')
+      : {
+          basePath: '',
+          context: {
+            locale: new URLSearchParams(location.search).get('locale') ?? 'en',
+          },
+        },
   )
 }

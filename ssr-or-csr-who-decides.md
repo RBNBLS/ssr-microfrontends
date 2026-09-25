@@ -17,10 +17,12 @@ shell, stacked.
 
 ```ts
 // ssr-shell-rt/app/routes.ts
-route(`${MFE1_SEGMENT}/*`, 'routes/mfe1.tsx')
+route(':locale', 'routes/locale.tsx', [
+  route(`${MFE1_SEGMENT}/*`, 'routes/mfe1.tsx'),
+])
 ```
 
-The splat means every URL under `/mfe1` — `/mfe1`, `/mfe1/about`, `/mfe1/a/b` —
+The splat means every URL under `/:locale/mfe1` — `/en/mfe1`, `/en/mfe1/about`, `/fr/mfe1/a/b` —
 lands in the same shell route module. The shell does not know the MFE's route
 table and does not need to.
 
@@ -29,7 +31,7 @@ table and does not need to.
 ```ts
 // ssr-shell-rt/app/routes/mfe1.tsx
 export async function loader({ request }) {
-  const result = await fetchFragment(MFE1_FRAGMENT_URL, { url, headers, basePath })
+  const result = await fetchFragment(MFE1_FRAGMENT_URL, { url, headers, basePath, context })
   return { data: result.data, head: result.head, htmlToken: putHtml(result.html) }
 }
 ```
@@ -56,7 +58,7 @@ MFE's own router handles it in the browser.
 
 | Request | Shell loader runs? | `POST /__fragment`? | Who renders MFE1 |
 | --- | --- | --- | --- |
-| Page load `/mfe1/about` (typed URL, reload, crawler) | yes — server | yes | fragment server |
+| Page load `/en/mfe1/about` (typed URL, reload, crawler) | yes — server | yes | fragment server |
 | Click the shell's **MFE1** link from `/` | yes — server, via a `.data` request | yes | `data` feeds `hydrationData`; the returned HTML is unused (container is empty, `clientEntry` mounts fresh) |
 | Click **About** inside MFE1 | no | no | MFE's router, in the browser |
 | Page load `/` | route not matched | no | — |
@@ -71,7 +73,7 @@ Two consequences worth stating plainly:
   does the first row.
 
 The `rendered on: server | browser` badge in MFE1's routes shows this live: the
-loader records `typeof document === 'undefined'`. Land on `/mfe1/about`
+loader records `typeof document === 'undefined'`. Land on `/en/mfe1/about`
 directly → *server*. Reach it by clicking from Home → *browser*.
 
 ---
@@ -112,7 +114,7 @@ A crawler is an HTTP client that does not run JavaScript. That is `curl`, or
 Postman with a bot User-Agent:
 
 ```sh
-curl -s -A "Googlebot/2.1" localhost:3000/mfe1/about \
+curl -s -A "Googlebot/2.1" localhost:3000/en/mfe1/about \
   | grep -o "<title>[^<]*\|rendered on: <strong>[a-z]*"
 # <title>MFE1
 # rendered on: <strong>server

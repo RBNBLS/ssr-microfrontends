@@ -21,11 +21,19 @@ export default function Home() {
   useEffect(() => {
     const mfe1 = capabilities.mfe1;
     if (!mfe1 || !widgetRef.current) return;
-    const handle = mfe1.mountGreeting(widgetRef.current, {
-      text: "Initial render",
-    });
+    // Own element per mount, as in routes/mfe1.tsx: a remount never reuses a
+    // container whose root is still being torn down.
+    const el = widgetRef.current.appendChild(document.createElement("div"));
+    const handle = mfe1.mountGreeting(el, { text: "Initial render" });
     updateGreeting.current = handle.update;
-    return () => handle.unmount();
+    return () => {
+      // Deferred: this cleanup runs during the shell's render, and React
+      // can't unmount another root mid-render.
+      setTimeout(() => {
+        handle.unmount();
+        el.remove();
+      });
+    };
   }, [capabilities.mfe1]);
 
   useEffect(() => {
