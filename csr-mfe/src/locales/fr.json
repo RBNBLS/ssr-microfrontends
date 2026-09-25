@@ -1,0 +1,13 @@
+{
+  "tagline": "(rendu côté client uniquement, basename fourni par le shell)",
+  "home": "Accueil",
+  "items": "Articles",
+  "greeting": "Bonjour de MFE2.",
+  "itemsTitle": "Catalogue",
+  "itemTitle": "Article {id}",
+  "back": "Retour au catalogue",
+  "renderedOn": "rendu sur",
+  "notFound": "Introuvable.",
+  "error": "Une erreur est survenue.",
+  "loading": "Chargement…"
+}

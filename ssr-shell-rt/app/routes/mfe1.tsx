@@ -1,21 +1,17 @@
-import { loadRemote } from "@module-federation/enhanced/runtime";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   data,
   useLoaderData,
-  useLocation,
-  useNavigate,
   useParams,
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
+import { MfeMount } from "../components/MfeMount";
 import { mfe1Base } from "../mfeConfig";
 import { MFE1_FRAGMENT_URL, MFE_SSR_TIMEOUT_MS } from "../mfeConfig.server";
 import { peekHtml, putHtml } from "../mfeHtmlStore";
 import type { MfeCapabilities } from "../mfeCapabilities";
 import {
   isCompatible,
-  type ClientEntryHandle,
-  type ClientEntryModule,
   type FragmentRequest,
   type FragmentResponse,
 } from "@platform/mfe-contract";
@@ -28,10 +24,6 @@ import type { Route } from "./+types/mfe1";
 // against, checked below before its output is used: shell and MFEs deploy
 // independently, so compiling against the same types doesn't mean running
 // against them.
-
-// Marks the element wrapping server-rendered MFE markup inside #mfe1-root —
-// the element MFE1's root hydrates. See `Mfe1Mount`.
-const SSR_MARK = "data-mfe-ssr";
 
 /** `mfe1/capabilities` — declared once, in the map every MFE shares. */
 type Mfe1Capabilities = MfeCapabilities["mfe1"];
@@ -137,123 +129,25 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-export default function Mfe1Mount() {
+export default function Mfe1Route() {
   const initial = useLoaderData<typeof loader>();
   // Validated by the parent layout (routes/locale.tsx).
   const locale = useParams().locale!;
   // Resolved on the server only. On the client the container already holds the
-  // server-rendered markup, so there is nothing to look up. Null when SSR
-  // failed — the container renders empty and the MFE mounts client-side.
+  // server-rendered markup, so there is nothing to look up. Undefined when SSR
+  // failed — the MFE then mounts client-side, exactly like a CSR-only MFE.
   const [ssrHtml] = useState(() =>
     typeof document === "undefined" && initial
       ? peekHtml(initial.htmlToken)
       : undefined,
   );
-  const containerRef = useRef<HTMLDivElement>(null);
-  const handleRef = useRef<ClientEntryHandle | null>(null);
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // Where the shell's router believes it is, readable from callbacks without
-  // re-running the mount effect on every navigation.
-  const href = location.pathname + location.search;
-  const hrefRef = useRef(href);
-  hrefRef.current = href;
-
-  useEffect(() => {
-    const outer = containerRef.current;
-    if (!outer) return;
-    // MFE1's root never goes on #mfe1-root itself: React forbids a root on an
-    // element it renders with dangerouslySetInnerHTML. It gets an inner
-    // element — the server's wrapper, to hydrate, on the first mount; a fresh
-    // one otherwise, so a remount never reuses one whose root is still being
-    // torn down.
-    const ssrEl = outer.querySelector<HTMLElement>(`:scope > [${SSR_MARK}]`);
-    ssrEl?.removeAttribute(SSR_MARK);
-    const container = ssrEl ?? outer.appendChild(document.createElement("div"));
-    // Set by the cleanup. Covers StrictMode's mount → unmount → mount in dev
-    // and a real unmount racing the async load: a load that resolves after
-    // cleanup must not mount into a container this route no longer owns.
-    let cancelled = false;
-
-    async function loadRemoteMfe() {
-      const mfeClientModule =
-        await loadRemote<ClientEntryModule>("mfe1/clientEntry");
-      if (cancelled) return;
-      if (!mfeClientModule) {
-        throw new Error("mfe1/clientEntry unavailable (remote not registered)");
-      }
-      // A browser bundle on another contract major. Not mounting it leaves any
-      // server markup static — visible, not interactive — rather than broken.
-      if (!isCompatible(mfeClientModule.contractVersion)) {
-        throw new Error(
-          `mfe1/clientEntry speaks contract v${mfeClientModule.contractVersion}, this shell doesn't`,
-        );
-      }
-      handleRef.current = mfeClientModule.clientEntry(container, {
-        data: initial?.data,
-        basePath: mfe1Base(locale),
-        // The same context the fragment server rendered with.
-        context: { locale },
-        host: {
-          href: hrefRef.current,
-          // MFE → shell. The shell is the only writer of window.history, so an
-          // in-MFE link becomes a shell navigation. `shouldRevalidate` above
-          // keeps that from re-running this route's loader.
-          onNavigate: (next) => {
-            if (next !== hrefRef.current) void navigate(next);
-          },
-        },
-      });
-    }
-
-    loadRemoteMfe().catch((error) => {
-      console.error("[shell] MFE1 client entry failed to load:", error);
-    });
-
-    return () => {
-      cancelled = true;
-      const handle = handleRef.current;
-      handleRef.current = null;
-      if (!handle) {
-        // Never mounted (StrictMode's immediate cleanup, or the load still
-        // pending): hand the server markup back for the next mount to hydrate.
-        if (ssrEl) ssrEl.setAttribute(SSR_MARK, "");
-        else container.remove();
-        return;
-      }
-      // Without this the MFE's React root outlives the route: detached from
-      // the DOM but still rendering. Deferred: this cleanup runs during the
-      // shell's render, and React can't unmount another root mid-render.
-      container.hidden = true;
-      setTimeout(() => {
-        handle.unmount();
-        container.remove();
-      });
-    };
-  }, [initial, navigate, locale]);
-
-  // Shell → MFE. Every shell navigation — its own links, back/forward, and the
-  // ones the MFE just asked for — ends here; the MFE ignores the ones it
-  // already knows about. Keyed on `location.key` so a navigation to the same
-  // pathname still counts.
-  useEffect(() => {
-    handleRef.current?.navigate(hrefRef.current);
-  }, [location.key]);
-
   return (
-    <div
-      id="mfe1-root"
-      ref={containerRef}
-      // The contents are owned by MFE1, not by this React tree: server-rendered
-      // here inside a marked wrapper, then hydrated by MFE1's own root on that
-      // wrapper. React does not write innerHTML during hydration, so the server
-      // markup survives the client's empty value; suppressHydrationWarning
-      // silences the dev-only mismatch notice for that intentional difference.
-      suppressHydrationWarning
-      dangerouslySetInnerHTML={{
-        __html: ssrHtml ? `<div ${SSR_MARK}>${ssrHtml}</div>` : "",
-      }}
+    <MfeMount
+      remote="mfe1"
+      basePath={mfe1Base(locale)}
+      locale={locale}
+      data={initial?.data}
+      ssrHtml={ssrHtml}
     />
   );
 }

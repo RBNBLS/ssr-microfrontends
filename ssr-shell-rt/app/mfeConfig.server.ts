@@ -14,6 +14,11 @@ export const MFE1_FRAGMENT_URL =
 export const MFE1_REMOTE_ENTRY =
   process.env.MFE1_REMOTE_ENTRY ?? "http://localhost:3001/mf-manifest.json";
 
+/** MFE2's browser container. MFE2 is client-rendered only, so this is all the
+ *  shell needs from it — there is no fragment URL. */
+export const MFE2_REMOTE_ENTRY =
+  process.env.MFE2_REMOTE_ENTRY ?? "http://localhost:3003/mf-manifest.json";
+
 /** Budget for an MFE's server render. Past this the shell stops waiting and
  *  falls back to client rendering, so one slow MFE cannot hold the whole
  *  response hostage. */
@@ -24,5 +29,6 @@ export const MFE_SSR_TIMEOUT_MS = 1000;
 export function buildMfeRegistry(): Record<string, string> {
   return {
     mfe1: MFE1_REMOTE_ENTRY,
+    mfe2: MFE2_REMOTE_ENTRY,
   };
 }

@@ -253,6 +253,7 @@ server; it still isn't added to `context`.
 | --- | --- | --- |
 | `ssr-shell-rt` | Shell. React Router framework mode on rsbuild. Owns the document and URL space. | 3000 |
 | `ssr-mfe` | MFE1. React Router library mode + fragment server. | 3001 browser bundle, 3002 fragment server |
+| `csr-mfe` | MFE2. React Router library mode, client-rendered only — no server. | 3003 browser bundle |
 | `mfe-contract` | `@platform/mfe-contract` — the shell ↔ MFE contract (types, version check, theme tokens), installed in both. | — |
 
 ### MFE endpoints
@@ -342,6 +343,24 @@ How the shell's route (`app/routes/mfe1.tsx`) and `clientEntry` meet:
 - **HTML never enters loader data.** The framework serialises loader data into
   the page; the fragment would ship twice. A token goes through
   `app/mfeHtmlStore.ts` and the markup is read server-side only.
+
+### Client-rendered MFEs
+
+Not every MFE needs SEO. A client-rendered one (MFE2) is built the same way
+minus the server half: same contract, same `clientEntry`, same i18n, styling
+and theme rules. The shell mounts SSR and CSR MFEs through one component
+(`MfeMount`); a CSR route simply has no loader, so it passes no `data` and no
+markup — exactly what an SSR MFE gets when its fragment fetch fails. One code
+path, tested both ways.
+
+The trade: a CSR MFE's content isn't in the server's HTML, and an unknown path
+inside it can't set the document's status (it renders its own not-found under
+a 200). Its first loaders run in the browser, behind a `HydrateFallback`.
+
+Verified: empty mount point in the server HTML; mounts and runs its loaders in
+the browser; in-MFE navigation, back/forward (with slow loaders), deep links,
+locale and theme; switching between MFE1 and MFE2; all shared libraries loaded
+once, from the shell.
 
 ### Ownership boundary
 

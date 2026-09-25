@@ -1,6 +1,6 @@
 import { loadRemote } from "@module-federation/enhanced/runtime";
 import { useEffect, useState } from "react";
-import type { MfeCapabilities, MfeName } from "./mfeCapabilities";
+import { MFES_WITH_CAPABILITIES, type MfeCapabilities, type MfeName } from "./mfeCapabilities";
 
 export type LoadedCapabilities = Partial<MfeCapabilities>;
 
@@ -8,7 +8,11 @@ export function useCapabilities(
   mfeRegistry: Record<string, string>,
 ): LoadedCapabilities {
   const [capabilities, setCapabilities] = useState<LoadedCapabilities>({});
-  const stringifiedMfeNames = Object.keys(mfeRegistry).sort().join(",");
+  // Registered *and* exposing capabilities.
+  const stringifiedMfeNames = Object.keys(mfeRegistry)
+    .filter((name) => (MFES_WITH_CAPABILITIES as ReadonlyArray<string>).includes(name))
+    .sort()
+    .join(",");
 
   useEffect(() => {
     let cancelled = false;

@@ -1,6 +1,7 @@
 {
   "nav.home": "Accueil",
   "nav.mfe1": "MFE1",
+  "nav.mfe2": "MFE2",
   "locale.label": "Langue",
   "home.title": "Shell (React Router, mode framework)",
   "home.body": "Route d'accueil du shell — rendue côté serveur.",

@@ -22,3 +22,7 @@ export interface MfeCapabilities {
 }
 
 export type MfeName = keyof MfeCapabilities;
+
+/** The MFEs that expose `./capabilities` — not every registered MFE does
+ *  (MFE2 doesn't), and asking one that doesn't is a load error. */
+export const MFES_WITH_CAPABILITIES = ["mfe1"] as const satisfies ReadonlyArray<MfeName>;

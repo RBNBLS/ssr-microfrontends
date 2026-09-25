@@ -56,6 +56,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link to={`/${locale}/mfe1`}>
               <FormattedMessage id="nav.mfe1" />
             </Link>
+            <Link to={`/${locale}/mfe2`}>
+              <FormattedMessage id="nav.mfe2" />
+            </Link>
             <LocalePicker locale={locale} />
             <ThemePicker theme={theme} />
           </div>

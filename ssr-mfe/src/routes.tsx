@@ -71,6 +71,18 @@ function ErrorBoundary() {
   )
 }
 
+// Shown while the first loaders run in the browser — i.e. whenever there is
+// no server data to hydrate from: always for a client-rendered MFE, and for a
+// server-rendered one standalone or after its fragment fetch failed. Without
+// it React Router renders nothing and warns.
+function HydrateFallback() {
+  return (
+    <Frame>
+      <p><FormattedMessage id="loading" /></p>
+    </Frame>
+  )
+}
+
 function Home() {
   const loaderData = useLoaderData() as GreetingData
   return (
@@ -101,6 +113,7 @@ export const routes: Array<RouteObject> = [
     path: '/',
     Component: Layout,
     ErrorBoundary,
+    HydrateFallback,
     children: [
       {
         id: 'home',

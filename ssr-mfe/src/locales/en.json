@@ -7,5 +7,6 @@
   "renderedOn": "rendered on",
   "fetchedAt": "fetched at",
   "notFound": "Not found.",
-  "error": "Something went wrong."
+  "error": "Something went wrong.",
+  "loading": "Loading…"
 }

@@ -16,6 +16,8 @@ server- or client-rendered — nothing decides; it is structural). This file is 
 | --- | --- | --- |
 | `ssr-shell-rt/` | The shell. Owns the document and URL space. | React Router **framework mode** + rsbuild |
 | `ssr-mfe/` | MFE1. Renders fragments, serves them over HTTP. | React Router **library mode** + plain Node server |
+| `csr-mfe/` | MFE2. Client-rendered only: a browser bundle, no server. | React Router **library mode** |
+| `mfe-contract/` | `@platform/mfe-contract` — types, version check, theme tokens. | — |
 
 React Router was chosen over TanStack Router/Start. An earlier `ssr-shell/`
 (TanStack Start, in-process federation) was deleted; the evidence — every path
@@ -29,6 +31,7 @@ is Node 18, which Rspack rejects outright. Always `nvm use` first.
 
 ```sh
 cd ssr-mfe      && nvm use && npm run dev   # :3001 browser build, :3002 fragment server
+cd csr-mfe      && nvm use && npm run dev   # :3003 browser build only
 cd ssr-shell-rt && nvm use && npm run dev   # :3000
 ```
 
@@ -112,6 +115,26 @@ Each of these cost real time. None are obvious from the symptom.
   MFE-internal navigation (the MFE owns that) but returns true when the locale
   changes, so the fragment is refetched and the mount effect — keyed on the
   loader data — remounts the MFE with the new `context`.
+
+### Client-rendered MFEs (MFE2)
+
+Same patterns as MFE1 minus the server half: same contract, `clientEntry`
+(byte-for-byte MFE1's), react-intl, Tailwind rules and theme tokens. The shell
+mounts both through one component, `app/components/MfeMount.tsx`; an SSR route
+passes it `data` + `ssrHtml`, a CSR route (`routes/mfe2.tsx`) passes neither and
+has no loader. So a CSR MFE is exactly an SSR MFE whose fragment fetch failed.
+What it gives up: content isn't in the server's HTML (no SEO), and an unknown
+path inside it can't make the document a 404.
+
+- **Every MFE's root route has a `HydrateFallback`.** Without server data the
+  first loaders run in the browser, and without a fallback React Router renders
+  nothing and warns — always for MFE2, and for MFE1 standalone or after a
+  failed fragment fetch.
+- **Capabilities are asked only of MFEs that expose them**
+  (`MFES_WITH_CAPABILITIES` in `app/mfeCapabilities.ts`). `useCapabilities`
+  used to try every registered MFE, which is a load error for MFE2.
+- Registering a CSR MFE is a registry entry (`mfeConfig.server.ts`) plus a
+  route; there is no fragment URL.
 
 ### Locale
 

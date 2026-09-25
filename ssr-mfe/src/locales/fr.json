@@ -7,5 +7,6 @@
   "renderedOn": "rendu sur",
   "fetchedAt": "récupéré à",
   "notFound": "Introuvable.",
-  "error": "Une erreur est survenue."
+  "error": "Une erreur est survenue.",
+  "loading": "Chargement…"
 }

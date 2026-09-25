@@ -1,0 +1,13 @@
+{
+  "tagline": "(client-rendered only, basename passed by the shell)",
+  "home": "Home",
+  "items": "Items",
+  "greeting": "Hello from MFE2.",
+  "itemsTitle": "Catalog",
+  "itemTitle": "Item {id}",
+  "back": "Back to the catalog",
+  "renderedOn": "rendered on",
+  "notFound": "Not found.",
+  "error": "Something went wrong.",
+  "loading": "Loading…"
+}
