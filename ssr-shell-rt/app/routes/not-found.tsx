@@ -19,7 +19,7 @@ export function meta({ params }: Route.MetaArgs) {
 
 export default function NotFound() {
   return (
-    <p style={{ padding: 8 }}>
+    <p className="p-2">
       <FormattedMessage id="notFound.body" />
     </p>
   )

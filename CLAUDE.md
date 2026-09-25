@@ -136,6 +136,41 @@ versions match, no forced upgrade when they don't. An MFE may use i18next
 instead, but must keep it out of `shared` and never use the global instance or
 `changeLanguage`: i18next's instance is module-level state.
 
+### Theme
+
+The shell selects light or dark (`app/theme.ts`), stores it in the `theme`
+cookie, and the root loader renders it into `<html data-theme>` — so the
+server's HTML is already right: no flash, no hydration mismatch. A cookie, not
+`localStorage`, precisely so the server can do that. MFEs **never receive or
+read the theme**: they style only with the `--theme-*` tokens from
+`@platform/mfe-contract/theme.css`, so their markup is identical in both themes
+and a switch (`components/ThemePicker.tsx`: set the attribute, then revalidate)
+restyles them without a re-render or a fragment refetch. It's not in the
+contract's `context` on purpose — the locale changes what an MFE renders, the
+theme only how it looks. Standalone MFE pages take `?theme=dark`.
+
+### Styling (Tailwind v4, both projects)
+
+The shell runs full Tailwind (`app/app.css`, preflight included — it owns base
+styles). An MFE's Tailwind (`ssr-mfe/src/styles.css`) differs in three ways,
+each learned the hard way:
+
+- **A prefix** (`mfeone:p-3`) so two Tailwind builds can't override each
+  other's classes. Prefixes must be lowercase letters only: `prefix(mfe1)`
+  fails the build.
+- **No preflight** — one reset per page, the shell's.
+- **No cascade layers.** Layer order is global and set by whichever stylesheet
+  comes first; the shell links MFE CSS *before* its own, so a layered MFE
+  `utilities` ranked below the shell's `base` and preflight zeroed MFE1's
+  borders and padding. Unlayered rules outrank all layers in any order.
+
+Colours are aliases of the theme tokens (`bg-surface`, `text-content`,
+`border-line` …) in both builds. For server-rendered markup to be styled on
+first paint, the fragment server reads its expose's CSS from its own MF
+manifest and returns it as `head.styles`; the shell's MFE route renders those
+as `<link>`s from `meta`. Module Federation loads the same file on client
+navigation (the browser dedupes it).
+
 ### Types
 
 Both halves of the contract (`FragmentRequest`/`FragmentResponse`,

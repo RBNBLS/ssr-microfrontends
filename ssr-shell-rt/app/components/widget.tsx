@@ -8,7 +8,7 @@ interface CustomWidgetProps {
 export function CustomWidget({ ref }: CustomWidgetProps) {
   return (
     <Draggable nodeRef={ref as any}>
-      <div ref={ref} style={{ width: "50%", height: 450 }}></div>
+      <div ref={ref} className="h-[450px] w-1/2"></div>
     </Draggable>
   );
 }

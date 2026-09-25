@@ -12,6 +12,10 @@ import {
 } from "@platform/mfe-contract";
 import { I18nProvider } from "./i18n";
 import { routes } from "./routes";
+// Loaded with this module under the shell (Module Federation fetches the
+// expose's CSS) and standalone. For server-rendered markup the fragment
+// response also names it in `head.styles`, so it arrives before paint.
+import "./styles.css";
 
 // Exposed as `./clientEntry`; hosts check this before calling `clientEntry`.
 export const contractVersion = CONTRACT_VERSION;

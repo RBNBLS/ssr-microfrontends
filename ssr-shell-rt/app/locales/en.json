@@ -5,5 +5,8 @@
   "home.title": "Shell (React Router framework mode)",
   "home.body": "Shell home route — server-rendered.",
   "notFound.title": "Not found",
-  "notFound.body": "Not found."
+  "notFound.body": "Not found.",
+  "theme.label": "Theme",
+  "theme.light": "Light",
+  "theme.dark": "Dark"
 }

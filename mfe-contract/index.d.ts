@@ -43,7 +43,13 @@ export interface FragmentResponse<Data = Record<string, unknown>> {
   status: number;
   /** Loader data, handed back to `clientEntry` to hydrate without refetching. */
   data: Data;
-  head: { title: string };
+  head: {
+    title: string;
+    /** Absolute URLs of the stylesheets the fragment's markup needs, for the
+     *  host to link in the document <head> — without them, server-rendered
+     *  markup is unstyled until the MFE's browser bundle loads its CSS. */
+    styles?: string[];
+  };
 }
 
 // ── Browser half: the exposed `./clientEntry` module ─────────────────────

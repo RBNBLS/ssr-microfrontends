@@ -5,5 +5,8 @@
   "home.title": "Shell (React Router, mode framework)",
   "home.body": "Route d'accueil du shell — rendue côté serveur.",
   "notFound.title": "Introuvable",
-  "notFound.body": "Introuvable."
+  "notFound.body": "Introuvable.",
+  "theme.label": "Thème",
+  "theme.light": "Clair",
+  "theme.dark": "Sombre"
 }

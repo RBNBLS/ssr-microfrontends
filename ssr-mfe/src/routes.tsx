@@ -34,9 +34,11 @@ async function fetchGreeting(): Promise<GreetingData> {
 
 function Frame({ children }: { children: ReactNode }) {
   return (
-    <div style={{ border: '2px dashed #999', padding: 12, borderRadius: 8 }}>
+    // Theme-token colours (styles.css): the shell's <html data-theme>
+    // restyles this without MFE1 knowing the theme.
+    <div className="mfeone:rounded-lg mfeone:border-2 mfeone:border-dashed mfeone:border-line mfeone:bg-surface mfeone:p-3 mfeone:text-content">
       <strong>MFE1</strong> <FormattedMessage id="tagline" />
-      <nav style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
+      <nav className="mfeone:my-2 mfeone:flex mfeone:gap-2">
         <Link to="/"><FormattedMessage id="home" /></Link>
         <Link to="/about"><FormattedMessage id="about" /></Link>
       </nav>

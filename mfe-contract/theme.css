@@ -1,0 +1,32 @@
+/*
+ * Theme tokens — part of the shell ↔ MFE contract.
+ *
+ * The shell selects the theme and sets it on <html data-theme="light|dark">,
+ * server-rendered from its `theme` cookie, so the first paint is right. MFEs
+ * never receive or read the theme: they style with these variables only, so
+ * their markup is identical in both themes — no hydration mismatch, and a
+ * switch restyles every MFE on the page without re-rendering any of them.
+ *
+ * Renaming or removing a token is a breaking change, like changing the types
+ * in index.d.ts. Prefixed `--theme-` so they can't collide with an MFE's own
+ * variables (Tailwind defines `--color-*`).
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --theme-bg: #ffffff;
+  --theme-fg: #1a1a1a;
+  --theme-muted: #666666;
+  --theme-border: #999999;
+  --theme-accent: #0b62d6;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-bg: #121417;
+  --theme-fg: #e8e8e8;
+  --theme-muted: #a0a0a0;
+  --theme-border: #5c6370;
+  --theme-accent: #6ea8fe;
+}

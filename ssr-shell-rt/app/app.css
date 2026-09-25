@@ -1,0 +1,19 @@
+/*
+ * The shell's Tailwind — the full build, preflight included: the shell owns
+ * the document's base styles. MFEs build theirs without preflight and with a
+ * prefix (see ssr-mfe/src/styles.css), so nothing here collides with them.
+ */
+@import "tailwindcss";
+
+/* The shell's own <html data-theme> drives `dark:`, not the OS. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Colours are the contract's theme tokens (@platform/mfe-contract/theme.css),
+   so `bg-surface`, `text-content`, `border-line` … follow the theme as-is. */
+@theme inline {
+  --color-surface: var(--theme-bg);
+  --color-content: var(--theme-fg);
+  --color-muted: var(--theme-muted);
+  --color-line: var(--theme-border);
+  --color-accent: var(--theme-accent);
+}

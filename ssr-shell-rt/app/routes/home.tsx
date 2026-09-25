@@ -54,7 +54,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ padding: 8 }}>
+    <div className="p-2">
       <p>
         <FormattedMessage id="home.body" />
       </p>

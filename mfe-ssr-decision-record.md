@@ -210,6 +210,39 @@ There, a user-profile setting remembered in a cookie is the usual choice and
 the URL prefix is optional — the contract doesn't change, only where the shell
 reads the locale from.
 
+### 2.9 The theme is CSS, selected by the shell
+
+The shell selects light or dark and sets it on `<html data-theme>`, rendered
+by the server from a `theme` cookie. MFEs don't receive it: they style with the
+theme tokens (`--theme-bg`, `--theme-fg`, … in `@platform/mfe-contract/theme.css`).
+
+**Why not pass it like the locale.** The locale changes *what* an MFE renders —
+its text — so the server render needs it, and it travels in `context`. The
+theme changes only *how* it looks, which CSS resolves from the attribute:
+
+- MFE markup is identical in both themes, so hydration can't mismatch and
+  fragments don't vary by theme.
+- A switch restyles every MFE on the page with no re-render, no navigation and
+  no fragment refetch (verified: the MFE's DOM node survives the switch).
+- The contract's `context` stays small; the shared surface is the token names,
+  versioned with the contract package.
+
+**Why a cookie.** The server has to know the theme to write the attribute into
+its HTML; that is what makes the first paint right (verified with JavaScript
+disabled). `localStorage` is browser-only: it means a flash of the wrong theme
+or a blocking inline script, and the shell's own picker would hydrate in the
+wrong state.
+
+**No "follow the OS" mode.** The shell always decides, so the server always
+knows. Adding it later is additive: no attribute plus a
+`prefers-color-scheme` rule in the tokens — the server can't know the OS
+preference on a first request (only Chromium sends it, and only after opting
+in), which is why it's CSS-only.
+
+**An MFE that needs the theme in JavaScript** (a canvas chart) reads the
+effective value on the client from the attribute and renders neutrally on the
+server; it still isn't added to `context`.
+
 ---
 
 ## 3. The implemented system
@@ -220,7 +253,7 @@ reads the locale from.
 | --- | --- | --- |
 | `ssr-shell-rt` | Shell. React Router framework mode on rsbuild. Owns the document and URL space. | 3000 |
 | `ssr-mfe` | MFE1. React Router library mode + fragment server. | 3001 browser bundle, 3002 fragment server |
-| `mfe-contract` | `@platform/mfe-contract` — the shell ↔ MFE contract, installed in both. | — |
+| `mfe-contract` | `@platform/mfe-contract` — the shell ↔ MFE contract (types, version check, theme tokens), installed in both. | — |
 
 ### MFE endpoints
 
@@ -241,6 +274,11 @@ versioned slot for what the shell decides per request — `locale` today.
 - **Compile time.** The MFE implements the types (`satisfies ClientEntryModule`),
   the shell imports them. A change one side doesn't expect fails that side's
   build.
+- **Styles.** `FragmentResponse.head.styles` lists the stylesheets the
+  fragment's markup needs, read by the fragment server from its own browser
+  build's Module Federation manifest — the build deployed next to it, so the
+  names match. The shell links them in the server-rendered `<head>`; without
+  them, server-rendered markup is unstyled until the browser bundle loads.
 - **Runtime.** Shell and MFEs deploy independently, so compiling against the
   same types says nothing about what is running. Each side reports the
   `CONTRACT_VERSION` it was built against — in `FragmentResponse` and as an
@@ -344,6 +382,11 @@ recovers automatically when the MFE returns — no restart.
   singletons in the browser.
 - The contract is explicit: implement `@platform/mfe-contract`, report
   `CONTRACT_VERSION`, take the locale from `context` (a BCP 47 tag).
+- Style only with the `--theme-*` tokens; never read or branch on the theme
+  in render.
+- Tailwind in an MFE: a letters-only class prefix, no preflight, no cascade
+  layers (see `ssr-mfe/src/styles.css`). The fragment response names the
+  expose's stylesheets in `head.styles`, so the host links them before paint.
 - Translations: react-intl is the platform default (shared, one copy on the
   page). Whatever the library, one instance per render, initialised from
   `context.locale` — no global instance, no language detection.

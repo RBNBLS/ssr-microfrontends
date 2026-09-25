@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@rsbuild/core";
 import { pluginReact } from "@rsbuild/plugin-react";
+import { pluginTailwindcss } from "@rsbuild/plugin-tailwindcss";
 import { pluginReactRouter } from "rsbuild-plugin-react-router";
 import { pluginModuleFederation } from "@module-federation/rsbuild-plugin";
 
@@ -33,6 +34,7 @@ export default defineConfig({
   plugins: [
     pluginReactRouter({ federation: true }),
     pluginReact(),
+    pluginTailwindcss(),
     pluginModuleFederation(
       {
         name: "shell",

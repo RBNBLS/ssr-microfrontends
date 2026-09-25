@@ -1,0 +1,33 @@
+/*
+ * MFE1's Tailwind. Three differences from a standalone app, all because it
+ * shares a page with the shell and other MFEs:
+ *
+ * - No preflight. Tailwind's reset is global; the shell owns base styles, and
+ *   a second copy would restyle the whole page whenever MFE1 loads.
+ * - A prefix: classes are `mfeone:p-3`, not `p-3` (Tailwind prefixes are
+ *   lowercase letters only, hence not `mfe1`). Two Tailwind builds define
+ *   the same class names from different configs and versions; the prefix
+ *   keeps MFE1's from overriding the shell's, or another MFE's.
+ * - No cascade layers. Layer order is global to the document and set by
+ *   whichever stylesheet comes first — the host links this one in <head>
+ *   before its own, so a `@layer utilities` here ranked below the shell's
+ *   `base` layer, and the shell's preflight (`border: 0; padding: 0`) won.
+ *   Unlayered rules outrank every layer in any order; the prefix already
+ *   keeps them from clashing with the shell's utilities.
+ */
+@import "tailwindcss/theme.css" prefix(mfeone);
+@import "tailwindcss/utilities.css";
+
+/* The shell selects the theme on <html data-theme> — see theme.css in
+   @platform/mfe-contract. `dark:` follows it, not the OS. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Colours are the contract's theme tokens, so the shell's attribute restyles
+   MFE1 with no `dark:` needed: `mfeone:bg-surface`, `mfeone:border-line`, … */
+@theme inline {
+  --color-surface: var(--theme-bg);
+  --color-content: var(--theme-fg);
+  --color-muted: var(--theme-muted);
+  --color-line: var(--theme-border);
+  --color-accent: var(--theme-accent);
+}

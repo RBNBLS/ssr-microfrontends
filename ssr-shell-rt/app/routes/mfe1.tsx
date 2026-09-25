@@ -123,8 +123,18 @@ export function shouldRevalidate({
 // `Route.MetaArgs` tracks the arg's shape across React Router versions — the
 // v7 → v8 `data` → `loaderData` rename would now be a compile error, not a
 // silently missing title.
+// The fragment's stylesheets go in the server-rendered <head> so its markup
+// is styled on first paint, not only once MFE1's bundle loads its CSS.
 export function meta({ loaderData }: Route.MetaArgs) {
-  return loaderData?.head?.title ? [{ title: loaderData.head.title }] : [];
+  const head = loaderData?.head;
+  return [
+    ...(head?.title ? [{ title: head.title }] : []),
+    ...(head?.styles ?? []).map((href) => ({
+      tagName: "link" as const,
+      rel: "stylesheet",
+      href,
+    })),
+  ];
 }
 
 export default function Mfe1Mount() {

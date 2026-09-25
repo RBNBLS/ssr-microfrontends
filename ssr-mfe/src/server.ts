@@ -52,6 +52,32 @@ async function clientAssetTags(): Promise<string> {
 }
 
 /**
+ * The stylesheets MFE1's markup needs, as absolute URLs, from the Module
+ * Federation manifest of the browser build — the same CSS the host would load
+ * with `./clientEntry`, named up front so server-rendered markup is styled on
+ * first paint. Read from the build that is actually deployed next to this
+ * server, so the names match. Empty if it can't be read: the fragment still
+ * renders, only unstyled until the bundle loads.
+ */
+async function fragmentStyles(): Promise<string[]> {
+  try {
+    const response = await fetch(`${CLIENT_ORIGIN}/mf-manifest.json`, {
+      signal: AbortSignal.timeout(1000),
+    });
+    const manifest = (await response.json()) as {
+      metaData: { publicPath: string };
+      exposes: Array<{ path: string; assets: { css: { sync: string[] } } }>;
+    };
+    const entry = manifest.exposes.find((e) => e.path === "./clientEntry");
+    return (entry?.assets.css.sync ?? []).map(
+      (file) => new URL(file, manifest.metaData.publicPath).href,
+    );
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Dev-only: SSR then hydrate, the way the shell does it, without the shell.
  * `index.tsx` finds `#mfe-preview` and hands its data to `clientEntry`, which
  * hydrates because `#root` already holds markup.
@@ -60,6 +86,7 @@ function previewPage(
   html: string,
   data: unknown,
   context: MfeContext,
+  theme: "light" | "dark",
   title: string,
   assets: string,
 ) {
@@ -69,14 +96,14 @@ function previewPage(
     "\\u003c",
   );
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${context.locale}" data-theme="${theme}">
   <head>
     <meta charset="utf-8" />
     <title>${title} — SSR preview</title>
     ${assets}
   </head>
-  <body>
-    <p style="font:14px system-ui;color:#666">
+  <body style="background:var(--theme-bg);color:var(--theme-fg)">
+    <p style="font:14px system-ui;color:var(--theme-muted)">
       SSR preview: server-rendered here, hydrated by the :3001 bundle — the
       path the shell takes.${assets ? "" : " <strong>:3001 is down, so no hydration.</strong>"}
     </p>
@@ -107,7 +134,11 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/__fragment" && req.method === "POST") {
     try {
       const input = await readJson(req);
-      json(res, 200, await serverEntry(input));
+      const [result, styles] = await Promise.all([
+        serverEntry(input),
+        fragmentStyles(),
+      ]);
+      json(res, 200, { ...result, head: { ...result.head, styles } });
     } catch (error) {
       // The shell treats any non-200 as "render this fragment client-side".
       console.error("[mfe1] fragment render failed:", error);
@@ -123,8 +154,11 @@ const server = createServer(async (req, res) => {
     url.pathname.startsWith(`${PREVIEW_BASE}/`);
   if (inPreview && req.method === "GET") {
     try {
-      // Standing in for the shell's choice: `?locale=fr`.
-      const context = { locale: url.searchParams.get("locale") ?? "en" };
+      // Standing in for the shell's choices: `?locale=fr&theme=dark`. Both end
+      // up in the HTML, so only well-formed values get through.
+      const locale = url.searchParams.get("locale") ?? "";
+      const context = { locale: /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(locale) ? locale : "en" };
+      const theme = url.searchParams.get("theme") === "dark" ? "dark" : "light";
       const [result, assets] = await Promise.all([
         serverEntry({
           url: url.pathname + url.search,
@@ -137,7 +171,7 @@ const server = createServer(async (req, res) => {
         "Content-Type": "text/html; charset=utf-8",
       });
       res.end(
-        previewPage(result.html, result.data, context, result.head.title, assets),
+        previewPage(result.html, result.data, context, theme, result.head.title, assets),
       );
     } catch (error) {
       res.writeHead(500, { "Content-Type": "text/plain" });

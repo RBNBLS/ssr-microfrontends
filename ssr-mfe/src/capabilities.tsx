@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import "./styles.css";
 
 // Plain functions and small mountable widgets other apps may call. Nothing in
 // here touches routing or window.history — that belongs to clientEntry.
@@ -19,7 +20,7 @@ export interface WidgetHandle<Input> {
 
 function Greeting({ text }: GreetingInput) {
   return (
-    <div style={{ border: "1px dashed #999", padding: 8, borderRadius: 8 }}>
+    <div className="mfeone:rounded-lg mfeone:border mfeone:border-dashed mfeone:border-line mfeone:p-2">
       <strong>MFE widget mode:</strong> {text}
     </div>
   );

@@ -1,6 +1,6 @@
 {
   "name": "@platform/mfe-contract",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "private": true,
   "description": "The shell ↔ MFE contract. Owned by the platform; every MFE implements it, the shell consumes it. Would be published to a registry once shell and MFEs live in separate repos.",
   "type": "module",
@@ -8,6 +8,7 @@
     ".": {
       "types": "./index.d.ts",
       "default": "./index.js"
-    }
+    },
+    "./theme.css": "./theme.css"
   }
 }
