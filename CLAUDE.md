@@ -22,7 +22,7 @@ server- or client-rendered — nothing decides; it is structural). This file is 
 React Router was chosen over TanStack Router/Start. An earlier `ssr-shell/`
 (TanStack Start, in-process federation) was deleted; the evidence — every path
 tested and rejected, and the `$_TSR` appendix — is in the decision record as of
-commit `741d123` (`git show 741d123:mfe-ssr-decision-record.md`).
+commit `73800e9` (`git show 73800e9:mfe-ssr-decision-record.md`).
 
 ## Running
 
@@ -216,7 +216,7 @@ MFE-specific extras (`app/mfeCapabilities.ts`) are still hand-declared.
 - **TanStack Router for an MFE.** Renders an empty string server-side. Its SSR
   bootstrap is annotated `Framework-only` and expects TanStack Start to drive it.
   Behind that sits the `$_TSR` global collision. Evidence: the decision
-  record's appendix at commit `741d123`.
+  record's appendix at commit `73800e9`.
 - **TanStack Start for an MFE.** Emits whole documents, no fragment contract.
 - **Vite instead of rsbuild.** `@module-federation/vite` is CSR-oriented with
   documented SSR incompatibilities.
