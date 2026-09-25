@@ -125,6 +125,17 @@ render and the hydration agree — MFEs never read it from headers, cookies or
 storage. Standalone MFE pages take `?locale=`. Why the URL and not a cookie,
 `?lang=` or `localStorage`: decision record §2.8.
 
+Translations use **react-intl** in both the shell (`app/i18n.tsx`, `app/locales/`)
+and MFE1 (`src/i18n.tsx`, `src/locales/`): one `IntlProvider` per render, no
+global instance, no detection — safe on a server rendering many users at once.
+English JSON defines the keys; other locales are typed against it and message
+ids are typed via `FormatjsIntl.Message`, so a missing translation or a typo'd
+id fails typecheck. `meta` runs outside the React tree: use `intlFor()`
+(`createIntl`). `react-intl` is shared **without** `singleton` — one copy when
+versions match, no forced upgrade when they don't. An MFE may use i18next
+instead, but must keep it out of `shared` and never use the global instance or
+`changeLanguage`: i18next's instance is module-level state.
+
 ### Types
 
 Both halves of the contract (`FragmentRequest`/`FragmentResponse`,

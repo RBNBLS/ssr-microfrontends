@@ -108,6 +108,11 @@ endpoint is designed on purpose, not scraped out of a document.
 Federation is used for one thing: loading each MFE's browser bundle at runtime
 and sharing dependencies with it. `react`, `react-dom`, **`react-dom/client`**
 and `react-router` are singletons, so the page carries one copy of each.
+`react-intl` is shared *without* `singleton`: it keeps all state in its
+provider, so one copy serves every app when versions match, and an MFE on an
+incompatible version loads its own rather than being forced onto the shell's.
+A library holding module-level state — i18next's global instance — must not be
+shared at all, or apps would share that state.
 
 `react-dom/client` has to be listed on its own — a subpath isn't covered by its
 package's shared entry — and it matters most: it holds React's renderer. With
@@ -338,7 +343,10 @@ recovers automatically when the MFE returns — no restart.
 - `react`, `react-dom`, `react-dom/client` and `react-router` are shared
   singletons in the browser.
 - The contract is explicit: implement `@platform/mfe-contract`, report
-  `CONTRACT_VERSION`, take the locale from `context`.
+  `CONTRACT_VERSION`, take the locale from `context` (a BCP 47 tag).
+- Translations: react-intl is the platform default (shared, one copy on the
+  page). Whatever the library, one instance per render, initialised from
+  `context.locale` — no global instance, no language detection.
 - **No mutable module-scope state in server code.** The fragment server handles
   many requests in one process, so module-level mutable state leaks across
   users.

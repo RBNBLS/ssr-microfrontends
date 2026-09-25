@@ -15,6 +15,11 @@ const shared = {
   // shell's router ("<Router> inside another <Router>").
   "react-dom/client": { singleton: true, requiredVersion: "^19.3.0" },
   "react-router": { singleton: true, requiredVersion: "^8.4.0" },
+  // Shared but *not* a singleton: react-intl keeps all state in its provider,
+  // so one copy serves every app when versions match, and an MFE on an
+  // incompatible version still loads its own instead of being forced onto the
+  // shell's. (i18next could not be shared at all: its instance is global.)
+  "react-intl": { requiredVersion: "^12.1.3" },
 };
 
 export default defineConfig({

@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { FormattedMessage } from "react-intl";
 import { useRouteLoaderData } from "react-router";
+import { intlFor } from "../i18n";
+import { localeFromParams } from "../locale";
+import type { Route } from "./+types/home";
 import type { loader as rootLoader } from "../root";
 import { useCapabilities } from "../useCapabilities";
 import { CustomWidget } from "../components/widget";
 
-export function meta() {
-  return [{ title: "Shell (React Router framework mode)" }];
+export function meta({ params }: Route.MetaArgs) {
+  return [{ title: intlFor(localeFromParams(params)).formatMessage({ id: "home.title" }) }];
 }
 
 export default function Home() {
@@ -51,7 +55,9 @@ export default function Home() {
 
   return (
     <div style={{ padding: 8 }}>
-      <p>Shell home route — server-rendered.</p>
+      <p>
+        <FormattedMessage id="home.body" />
+      </p>
       <CustomWidget ref={widgetRef} />
     </div>
   );

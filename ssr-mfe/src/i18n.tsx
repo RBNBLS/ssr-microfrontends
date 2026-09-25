@@ -1,45 +1,36 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { IntlProvider } from 'react-intl'
+import en from './locales/en.json'
+import frMessages from './locales/fr.json'
 
-// MFE1's own translations. The shell only says which locale; the words are
-// this MFE's. Bundled statically because they're tiny — a larger MFE would
-// load one file per locale before rendering.
-const en = {
-  tagline: '(own router, basename passed by the shell)',
-  home: 'Home',
-  about: 'About',
-  greeting: 'Hello from MFE1.',
-  aboutText: 'MFE1 about route.',
-  renderedOn: 'rendered on',
-  fetchedAt: 'fetched at',
-  notFound: 'Not found.',
-  error: 'Something went wrong.',
-}
+// MFE1's own translations. The shell only says which locale (`context.locale`,
+// a BCP 47 tag); the words are this MFE's.
 
-/** English defines the keys; every other locale must provide all of them. */
-type Messages = Record<keyof typeof en, string>
+// English defines the keys; every other locale must provide all of them — a
+// missing one fails typecheck.
+const fr: Record<keyof typeof en, string> = frMessages
 
-const messages: Record<string, Messages> = {
-  en,
-  fr: {
-    tagline: '(routeur propre, basename fourni par le shell)',
-    home: 'Accueil',
-    about: 'À propos',
-    greeting: 'Bonjour de MFE1.',
-    aboutText: 'Page « à propos » de MFE1.',
-    renderedOn: 'rendu sur',
-    fetchedAt: 'récupéré à',
-    notFound: 'Introuvable.',
-    error: 'Une erreur est survenue.',
-  },
-}
+const messages: Record<string, typeof en> = { en, fr }
 
-/** A locale this MFE has no translations for falls back to English. */
-const messagesFor = (locale: string): Messages => messages[locale] ?? en
-
-const I18n = createContext<Messages>(en)
-
+/**
+ * react-intl keeps everything in the provider — no global instance, no
+ * language detection, synchronous — so each server render and each browser
+ * mount gets its own, fixed to the shell's locale. A locale this MFE has no
+ * translations for gets English text, still formatted for the requested locale.
+ */
 export function I18nProvider({ locale, children }: { locale: string; children: ReactNode }) {
-  return <I18n.Provider value={messagesFor(locale)}>{children}</I18n.Provider>
+  return (
+    <IntlProvider locale={locale} defaultLocale="en" messages={messages[locale] ?? en}>
+      {children}
+    </IntlProvider>
+  )
 }
 
-export const useT = () => useContext(I18n)
+// Types message ids from the English file: `id: 'greting'` is a compile error.
+declare global {
+  namespace FormatjsIntl {
+    interface Message {
+      ids: keyof typeof en
+    }
+  }
+}

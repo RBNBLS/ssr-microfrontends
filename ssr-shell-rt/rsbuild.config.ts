@@ -11,6 +11,8 @@ const shared = {
   // note in ssr-mfe/rsbuild.config.ts.
   "react-dom/client": { singleton: true, requiredVersion: "^19.2.3" },
   "react-router": { singleton: true, requiredVersion: "^8.4.0" },
+  // Not a singleton — see the note in ssr-mfe/rsbuild.config.ts.
+  "react-intl": { requiredVersion: "^12.1.3" },
 };
 
 export default defineConfig({

@@ -1,0 +1,11 @@
+{
+  "tagline": "(routeur propre, basename fourni par le shell)",
+  "home": "Accueil",
+  "about": "À propos",
+  "greeting": "Bonjour de MFE1.",
+  "aboutText": "Page « à propos » de MFE1.",
+  "renderedOn": "rendu sur",
+  "fetchedAt": "récupéré à",
+  "notFound": "Introuvable.",
+  "error": "Une erreur est survenue."
+}

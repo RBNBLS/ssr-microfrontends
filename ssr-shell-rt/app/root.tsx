@@ -7,8 +7,10 @@ import {
   useLoaderData,
   useParams,
 } from "react-router";
+import { FormattedMessage } from "react-intl";
 import { LocalePicker } from "./components/LocalePicker";
-import { DEFAULT_LOCALE, isLocale } from "./locale";
+import { ShellIntl } from "./i18n";
+import { localeFromParams } from "./locale";
 import { buildMfeRegistry } from "./mfeConfig.server";
 import { registerMfeRemotes } from "./mfeRegistry";
 import { ErrorBoundary } from "react-error-boundary";
@@ -21,8 +23,7 @@ export function loader() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { locale: param } = useParams();
-  const locale = isLocale(param) ? param : DEFAULT_LOCALE;
+  const locale = localeFromParams(useParams());
   return (
     <html lang={locale}>
       <head>
@@ -32,14 +33,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <div style={{ display: "flex", gap: 12, padding: 8, fontSize: 18 }}>
-          <Link to={`/${locale}`}>Home</Link>
-          <Link to={`/${locale}/mfe1`}>MFE1</Link>
-          <LocalePicker locale={locale} />
-        </div>
-        <hr />
-        {children}
-        <Scripts />
+        <ShellIntl locale={locale}>
+          <div style={{ display: "flex", gap: 12, padding: 8, fontSize: 18 }}>
+            <Link to={`/${locale}`}>
+              <FormattedMessage id="nav.home" />
+            </Link>
+            <Link to={`/${locale}/mfe1`}>
+              <FormattedMessage id="nav.mfe1" />
+            </Link>
+            <LocalePicker locale={locale} />
+          </div>
+          <hr />
+          {children}
+          <Scripts />
+        </ShellIntl>
       </body>
     </html>
   );

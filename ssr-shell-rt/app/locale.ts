@@ -16,3 +16,11 @@ export const withLocale = (pathname: string, locale: Locale) =>
   pathname.replace(/^\/[^/]+/, `/${locale}`);
 
 export const LOCALE_COOKIE = "locale";
+
+/** The locale for any matched route: its `:locale` param, or — on the
+ *  catch-all 404 (`/fr/no-such-page`) — the first segment of the splat.
+ *  Falls back to the default. */
+export function localeFromParams(params: Record<string, string | undefined>): Locale {
+  const candidate = params.locale ?? params["*"]?.split("/")[0];
+  return isLocale(candidate) ? candidate : DEFAULT_LOCALE;
+}

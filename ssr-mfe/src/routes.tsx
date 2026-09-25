@@ -6,7 +6,7 @@ import {
   useRouteError,
 } from 'react-router'
 import type { ReactNode } from 'react'
-import { useT } from './i18n'
+import { FormattedMessage } from 'react-intl'
 import type { RouteObject } from 'react-router'
 
 type RenderedOn = 'server' | 'browser'
@@ -33,13 +33,12 @@ async function fetchGreeting(): Promise<GreetingData> {
 }
 
 function Frame({ children }: { children: ReactNode }) {
-  const t = useT()
   return (
     <div style={{ border: '2px dashed #999', padding: 12, borderRadius: 8 }}>
-      <strong>MFE1</strong> {t.tagline}
+      <strong>MFE1</strong> <FormattedMessage id="tagline" />
       <nav style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
-        <Link to="/">{t.home}</Link>
-        <Link to="/about">{t.about}</Link>
+        <Link to="/"><FormattedMessage id="home" /></Link>
+        <Link to="/about"><FormattedMessage id="about" /></Link>
       </nav>
       {children}
     </div>
@@ -59,13 +58,12 @@ function Layout() {
 // shell as `status` on the fragment.
 function ErrorBoundary() {
   const error = useRouteError()
-  const t = useT()
   return (
     <Frame>
       <p>
         {isRouteErrorResponse(error) && error.status === 404
-          ? t.notFound
-          : t.error}
+          ? <FormattedMessage id="notFound" />
+          : <FormattedMessage id="error" />}
       </p>
     </Frame>
   )
@@ -73,12 +71,11 @@ function ErrorBoundary() {
 
 function Home() {
   const loaderData = useLoaderData() as GreetingData
-  const t = useT()
   return (
     <div>
-      <p>{t.greeting}</p>
+      <p><FormattedMessage id="greeting" /></p>
       <small>
-        {t.renderedOn}: <strong>{loaderData.renderedOn}</strong> · {t.fetchedAt}{' '}
+        <FormattedMessage id="renderedOn" />: <strong>{loaderData.renderedOn}</strong> · <FormattedMessage id="fetchedAt" />{' '}
         {loaderData.fetchedAt}
       </small>
     </div>
@@ -87,12 +84,11 @@ function Home() {
 
 function About() {
   const { renderedOn } = useLoaderData() as { renderedOn: RenderedOn }
-  const t = useT()
   return (
     <div>
-      <p>{t.aboutText}</p>
+      <p><FormattedMessage id="aboutText" /></p>
       <small>
-        {t.renderedOn}: <strong>{renderedOn}</strong>
+        <FormattedMessage id="renderedOn" />: <strong>{renderedOn}</strong>
       </small>
     </div>
   )

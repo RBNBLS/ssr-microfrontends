@@ -15,8 +15,9 @@ export declare function isCompatible(version: unknown): boolean;
  * these out themselves (from headers, cookies or storage).
  */
 export interface MfeContext {
-  /** Selected by the shell (URL prefix, then cookie, then default). The MFE
-   *  owns its translations for it. */
+  /** A BCP 47 language tag (`en`, `fr`, `fr-CA`) — what `Intl`, react-intl
+   *  and i18next all accept as-is. Selected by the shell (URL prefix, then
+   *  cookie, then default). The MFE owns its translations for it. */
   locale: string;
 }
 

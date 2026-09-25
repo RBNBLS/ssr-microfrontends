@@ -1,0 +1,11 @@
+{
+  "tagline": "(own router, basename passed by the shell)",
+  "home": "Home",
+  "about": "About",
+  "greeting": "Hello from MFE1.",
+  "aboutText": "MFE1 about route.",
+  "renderedOn": "rendered on",
+  "fetchedAt": "fetched at",
+  "notFound": "Not found.",
+  "error": "Something went wrong."
+}
